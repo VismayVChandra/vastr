@@ -58,11 +58,11 @@ export default function LandingPage() {
             Digitize your wardrobe, tell Vastr about your day, and get outfits built from clothes
             you actually own — matched to the weather, the occasion, and your style.
           </p>
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <Button size="lg" asChild>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <Button size="lg" className="w-full sm:w-auto" asChild>
               <Link href="/signup">Create your wardrobe</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
               <Link href="/login">I have an account</Link>
             </Button>
           </div>
