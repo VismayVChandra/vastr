@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/nav/sidebar";
 import { BottomNav } from "@/components/nav/bottom-nav";
+import { UploadTray } from "@/components/upload/upload-tray";
+import { BulkReviewDialog } from "@/components/upload/bulk-review-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useWardrobeStore } from "@/store/wardrobe-store";
 import { useOutfitStore } from "@/store/outfit-store";
@@ -49,6 +51,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
       <BottomNav />
+      <UploadTray />
+      <BulkReviewDialog />
     </div>
   );
 }

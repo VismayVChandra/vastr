@@ -20,6 +20,13 @@ Schema:
 
 Return strict JSON only.`;
 
+export function visionBatchPrompt(count: number): string {
+  return `${VISION_SYSTEM_PROMPT}
+
+You will receive ${count} photos. Each photo is preceded by a text label "Image N". Analyze each photo independently.
+Return ONLY a JSON object of the form {"results": [...]} containing exactly one object per photo, in order. Each object uses the schema above plus an "index" field equal to N.`;
+}
+
 export function stylistSystemPrompt(): string {
   return `You are Vastr's AI personal stylist. You recommend outfits built ONLY from clothing the user actually owns, given as a JSON wardrobe. Never invent items or reference an item_id that isn't in the provided wardrobe list. When the wardrobe genuinely lacks something needed, name the gap in "missing_items" instead of pretending the user owns it.
 

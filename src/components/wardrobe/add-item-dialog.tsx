@@ -24,6 +24,9 @@ import { ChipSelect } from "@/components/shared/chip-select";
 import { useAuth } from "@/hooks/use-auth";
 import { useWardrobeStore } from "@/store/wardrobe-store";
 import { persistWardrobeImage } from "@/services/storage-service";
+import { compressImage } from "@/lib/image/compress";
+import { analyzeSingle } from "@/lib/upload/upload-store";
+import { visionToForm } from "@/lib/upload/vision-to-form";
 import { COLOR_PALETTE } from "@/lib/colors";
 import {
   CLOTHING_CATEGORIES,
@@ -81,40 +84,27 @@ export function AddItemDialog({ open, onOpenChange, editingItem }: AddItemDialog
   }
 
   async function handleFile(file: File) {
-    const dataUrl = await fileToDataUrl(file);
-    update("imageUrl", dataUrl);
     setAnalyzing(true);
     try {
-      const res = await fetch("/api/analyze-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataUrl, fileName: file.name }),
-      });
-      if (!res.ok) throw new Error("Analysis failed");
-      const { result, isMock, mockReason } = await res.json();
-      setForm((f) => ({
-        ...f,
-        name: f.name || result.suggestedName,
-        category: result.category,
-        subcategory: result.subcategory,
-        primaryColor: result.primaryColor,
-        secondaryColors: result.secondaryColors,
-        pattern: result.pattern,
-        material: result.material,
-        fit: result.fit,
-        formality: result.formality,
-        season: result.season,
-        styleTags: result.styleTags,
-      }));
+      // Shrink phone photos first: they'd otherwise exceed upload limits.
+      const dataUrl = await compressImage(file);
+      update("imageUrl", dataUrl);
+
+      // Shares the bulk queue, so it waits for AI capacity instead of failing.
+      const outcome = await analyzeSingle(dataUrl, file.name);
+      const filled = visionToForm(outcome.result, dataUrl);
+      setForm((f) => ({ ...filled, name: f.name || filled.name, brand: f.brand, size: f.size }));
       setAiNote(
-        !isMock
-          ? "AI filled these in from your photo — feel free to adjust anything."
-          : mockReason === "provider-error"
-            ? "The AI provider call failed, so this is an offline estimate — check the server logs and double-check these details."
-            : "Estimated without an AI key configured — please double-check these details."
+        !outcome.isMock
+          ? "AI filled these in from your photo. Feel free to adjust anything."
+          : outcome.estimateReason === "daily-limit"
+            ? "Today's free AI limit is used up, so this is an offline estimate. Please double-check it."
+            : outcome.estimateReason === "failed"
+              ? "AI couldn't read this photo, so this is an offline estimate. Please double-check it."
+              : "Estimated without an AI key configured. Please double-check these details."
       );
     } catch {
-      toast.error("Couldn't analyze the image automatically. Fill in the details below.");
+      toast.error("Couldn't read that photo. Fill in the details below.");
     } finally {
       setAnalyzing(false);
     }
@@ -367,13 +357,4 @@ function itemToForm(item: WardrobeItem): WardrobeItemInput {
     styleTags: item.styleTags,
     favorite: item.favorite,
   };
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }

@@ -3,10 +3,12 @@
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Plus, Shirt, Sparkles } from "lucide-react";
+import { Shirt, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
+import { AddMenu } from "@/components/upload/add-menu";
+import { PhotoDropOverlay } from "@/components/upload/photo-drop-overlay";
 import { WardrobeFiltersBar } from "@/components/wardrobe/wardrobe-filters";
 import { ClothingCard } from "@/components/wardrobe/clothing-card";
 import { AddItemDialog } from "@/components/wardrobe/add-item-dialog";
@@ -59,9 +61,7 @@ function WardrobePageInner() {
                 <Sparkles className="h-4 w-4" /> Insights
               </Link>
             </Button>
-            <Button onClick={openAdd}>
-              <Plus className="h-4 w-4" /> Add item
-            </Button>
+            <AddMenu onManual={openAdd} />
           </div>
         }
       />
@@ -80,7 +80,7 @@ function WardrobePageInner() {
         <EmptyState
           icon={Shirt}
           title="Your wardrobe is empty"
-          description="Add your first few pieces — a top, bottom, and shoes are enough to get outfit ideas started."
+          description="Add a top, bottom, and shoes to get outfit ideas started. Tip: use Add → Upload photos to add many at once, or drag photos onto this page."
           actionLabel="Add your first item"
           onAction={openAdd}
         />
@@ -105,6 +105,7 @@ function WardrobePageInner() {
       )}
 
       <AddItemDialog open={dialogOpen} onOpenChange={setDialogOpen} editingItem={editingItem} />
+      <PhotoDropOverlay />
     </div>
   );
 }

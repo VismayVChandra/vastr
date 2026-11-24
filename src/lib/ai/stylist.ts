@@ -2,7 +2,8 @@ import "server-only";
 import { getAnthropicClient, getGeminiClient, extractJson } from "./client";
 import { stylistSystemPrompt } from "./prompts";
 import { outfitGenerationSchema } from "./schemas";
-import { activeAIProvider, hasAIProvider, TEXT_MODEL, GEMINI_MODEL } from "./config";
+import { activeAIProvider, hasAIProvider, TEXT_MODEL } from "./config";
+import { withGeminiFallback } from "./gemini-models";
 import { generateOutfitsMock } from "./mock-stylist";
 import type { StylistContext, StylistResult } from "./stylist-context";
 
@@ -38,13 +39,16 @@ function buildWardrobeContext(ctx: StylistContext) {
 }
 
 async function callGemini(ctx: StylistContext): Promise<unknown> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    systemInstruction: stylistSystemPrompt(),
-    generationConfig: { responseMimeType: "application/json" },
-  });
-  const result = await model.generateContent(JSON.stringify(buildWardrobeContext(ctx), null, 2));
+  const prompt = JSON.stringify(buildWardrobeContext(ctx), null, 2);
+  const result = await withGeminiFallback((modelName) =>
+    getGeminiClient()
+      .getGenerativeModel({
+        model: modelName,
+        systemInstruction: stylistSystemPrompt(),
+        generationConfig: { responseMimeType: "application/json" },
+      })
+      .generateContent(prompt)
+  );
   return extractJson(result.response.text());
 }
 

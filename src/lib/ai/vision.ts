@@ -1,16 +1,28 @@
 import "server-only";
+import type { GenerationConfig } from "@google/generative-ai";
 import { getAnthropicClient, getGeminiClient, extractJson } from "./client";
-import { VISION_SYSTEM_PROMPT } from "./prompts";
+import { visionBatchPrompt } from "./prompts";
 import { visionResultSchema } from "./schemas";
-import { activeAIProvider, hasAIProvider, VISION_MODEL, GEMINI_MODEL } from "./config";
+import { classifyAIError } from "./errors";
+import { withGeminiFallback } from "./gemini-models";
+import { activeAIProvider, hasAIProvider, VISION_MODEL } from "./config";
 import { mockAnalyzeImage } from "./mock-vision";
 import type { AIVisionResult } from "@/types/wardrobe";
 
-interface AnalyzeInput {
+export interface AnalyzeInput {
   base64: string;
   mediaType: string;
   fileName: string;
   fileSizeBytes: number;
+}
+
+export type BatchItemOutcome =
+  | { ok: true; result: AIVisionResult; isMock: boolean }
+  | { ok: false };
+
+export interface BatchOutcome {
+  provider: "gemini" | "anthropic" | "none";
+  items: BatchItemOutcome[];
 }
 
 function toAIVisionResult(payload: ReturnType<typeof visionResultSchema.parse>): AIVisionResult {
@@ -30,81 +42,103 @@ function toAIVisionResult(payload: ReturnType<typeof visionResultSchema.parse>):
   };
 }
 
-async function analyzeWithGemini(input: AnalyzeInput): Promise<AIVisionResult> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    systemInstruction: VISION_SYSTEM_PROMPT,
-    generationConfig: { responseMimeType: "application/json" },
+/** Maps the model's {"results":[{index,...}]} onto the inputs, tolerating
+ *  missing or malformed entries (those come back as ok:false and get retried). */
+function parseBatchResponse(json: unknown, count: number): BatchItemOutcome[] {
+  const outcomes: BatchItemOutcome[] = Array.from({ length: count }, () => ({ ok: false }));
+  const raw = (json as { results?: unknown })?.results;
+  if (!Array.isArray(raw)) return outcomes;
+
+  raw.forEach((entry, position) => {
+    const declared = (entry as { index?: unknown })?.index;
+    const index = typeof declared === "number" ? declared : position;
+    if (!Number.isInteger(index) || index < 0 || index >= count) return;
+    const parsed = visionResultSchema.safeParse(entry);
+    if (parsed.success) {
+      outcomes[index] = { ok: true, result: toAIVisionResult(parsed.data), isMock: false };
+    }
   });
-
-  const result = await model.generateContent([
-    { inlineData: { mimeType: input.mediaType, data: input.base64 } },
-    { text: "Analyze this clothing item." },
-  ]);
-
-  const json = extractJson(result.response.text());
-  return toAIVisionResult(visionResultSchema.parse(json));
+  return outcomes;
 }
 
-async function analyzeWithAnthropic(input: AnalyzeInput): Promise<AIVisionResult> {
-  const anthropic = getAnthropicClient();
-  const message = await anthropic.messages.create({
+async function analyzeBatchWithGemini(inputs: AnalyzeInput[]): Promise<BatchItemOutcome[]> {
+  const parts = inputs.flatMap((input, i) => [
+    { text: `Image ${i}` },
+    { inlineData: { mimeType: input.mediaType, data: input.base64 } },
+  ]);
+
+  const response = await withGeminiFallback((modelName) => {
+    const model = getGeminiClient().getGenerativeModel({
+      model: modelName,
+      systemInstruction: visionBatchPrompt(inputs.length),
+      generationConfig: {
+        responseMimeType: "application/json",
+        // Classification doesn't need "thinking"; switching it off is faster and
+        // uses less quota. "Lite" models don't think by default (and may reject the setting).
+        ...(modelName.includes("lite") ? {} : { thinkingConfig: { thinkingBudget: 0 } }),
+      } as GenerationConfig,
+    });
+    return model.generateContent(parts);
+  });
+  return parseBatchResponse(extractJson(response.response.text()), inputs.length);
+}
+
+async function analyzeBatchWithAnthropic(inputs: AnalyzeInput[]): Promise<BatchItemOutcome[]> {
+  const message = await getAnthropicClient().messages.create({
     model: VISION_MODEL,
-    max_tokens: 1024,
-    system: VISION_SYSTEM_PROMPT,
+    max_tokens: 1024 * inputs.length,
+    system: visionBatchPrompt(inputs.length),
     messages: [
       {
         role: "user",
-        content: [
+        content: inputs.flatMap((input, i) => [
+          { type: "text" as const, text: `Image ${i}` },
           {
-            type: "image",
+            type: "image" as const,
             source: {
-              type: "base64",
-              media_type: input.mediaType as
-                | "image/jpeg"
-                | "image/png"
-                | "image/webp"
-                | "image/gif",
+              type: "base64" as const,
+              media_type: input.mediaType as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
               data: input.base64,
             },
           },
-          { type: "text", text: "Analyze this clothing item." },
-        ],
+        ]),
       },
     ],
   });
 
   const textBlock = message.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") throw new Error("No text response from model");
-
-  const json = extractJson(textBlock.text);
-  return toAIVisionResult(visionResultSchema.parse(json));
+  return parseBatchResponse(extractJson(textBlock.text), inputs.length);
 }
 
-export async function analyzeClothingImage(input: AnalyzeInput): Promise<{
-  result: AIVisionResult;
-  isMock: boolean;
-  mockReason?: "no-provider" | "provider-error";
-}> {
+/** Analyzes up to a handful of photos in a single provider request.
+ *  Rate-limit / overload errors are re-thrown (classified) so the caller can
+ *  schedule around them; other failures come back as ok:false per photo. */
+export async function analyzeClothingBatch(inputs: AnalyzeInput[]): Promise<BatchOutcome> {
   if (!hasAIProvider) {
     return {
-      result: mockAnalyzeImage(input.fileName, input.fileSizeBytes),
-      isMock: true,
-      mockReason: "no-provider",
+      provider: "none",
+      items: inputs.map((input) => ({
+        ok: true,
+        result: mockAnalyzeImage(input.fileName, input.fileSizeBytes),
+        isMock: true,
+      })),
     };
   }
 
   try {
-    const result =
-      activeAIProvider === "gemini" ? await analyzeWithGemini(input) : await analyzeWithAnthropic(input);
-    return { result, isMock: false };
+    const items =
+      activeAIProvider === "gemini"
+        ? await analyzeBatchWithGemini(inputs)
+        : await analyzeBatchWithAnthropic(inputs);
+    return { provider: activeAIProvider === "gemini" ? "gemini" : "anthropic", items };
   } catch (err) {
-    console.error(`[ai/vision] ${activeAIProvider} call failed, falling back to mock analysis:`, err);
+    const classified = classifyAIError(err);
+    if (classified) throw classified;
+    console.error(`[ai/vision] ${activeAIProvider} batch call failed:`, err);
     return {
-      result: mockAnalyzeImage(input.fileName, input.fileSizeBytes),
-      isMock: true,
-      mockReason: "provider-error",
+      provider: activeAIProvider === "gemini" ? "gemini" : "anthropic",
+      items: inputs.map(() => ({ ok: false })),
     };
   }
 }

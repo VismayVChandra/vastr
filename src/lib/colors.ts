@@ -45,3 +45,16 @@ export const COLOR_SWATCH: Record<string, string> = {
 export function swatchFor(color: string): string {
   return COLOR_SWATCH[color] ?? "#9ca3af";
 }
+
+/** Maps a free-form colour from AI ("navy blue", "off-white") onto the palette
+ *  so selects show a value and swatches render. Unknown colours pass through. */
+export function normalizeColor(raw: string): string {
+  const lower = raw.trim().toLowerCase();
+  const exact = COLOR_PALETTE.find((c) => c.toLowerCase() === lower);
+  if (exact) return exact;
+  const contained = COLOR_PALETTE.filter((c) => lower.includes(c.toLowerCase())).sort(
+    (a, b) => b.length - a.length
+  );
+  if (contained.length > 0) return contained[0];
+  return raw.trim().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+}
