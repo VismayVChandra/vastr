@@ -237,7 +237,9 @@ export function generateOutfitsMock(ctx: StylistContext): StylistResult {
       itemIds.push(shoes[Math.min(look.slot, shoes.length - 1)].id);
     }
 
-    if (weatherWantsLayer(ctx.weather)) {
+    // A jacket for the cold, and for dressy occasions where a blazer finishes the look.
+    const dressy = targetRank !== null && targetRank >= 3;
+    if (weatherWantsLayer(ctx.weather) || dressy) {
       const outer = topPicksForCategory(active, OUTER_CATEGORIES, ctx, targetRank, avoidIds, 2, pairBonus(ctx, itemIds));
       if (outer.length > 0) itemIds.push(outer[Math.min(look.slot, outer.length - 1)].id);
     }

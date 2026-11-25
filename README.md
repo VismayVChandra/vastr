@@ -151,7 +151,7 @@ Enter a destination, number of days, and activities. Vastr builds a packing list
 
 <p align="center"><img src="public/screenshots/mobile-home.png" alt="Mobile home screen" width="320" /></p>
 
-> The screenshots above use the built-in demo wardrobe, which has no photos, so items show as colour tiles. Items you upload show your own photos.
+> The screenshots above were taken before the demo wardrobe had photos, so items show as colour tiles. The demo wardrobe now uses real stock photos (credits in [`public/demo/CREDITS.md`](public/demo/CREDITS.md)), and items you add show your own.
 
 ---
 
@@ -210,6 +210,7 @@ Even on a deployment with accounts, the landing page has a **Try the demo** butt
 
 - Everything stays on the visitor's device. **Start over** wipes it, and signing up or in discards it before the real account loads.
 - A banner stays on screen so it's always clear it's a sandbox.
+- The sample wardrobe is 12 real items with photos from [Pexels](https://www.pexels.com) (free to use, credited in [`public/demo/CREDITS.md`](public/demo/CREDITS.md)).
 - Guests use the rule-based stylist, and their 👍/👎 feedback still adapts it. Photo features (upload, camera, outfit photo) need AI, so they show a "create a free account" prompt. This keeps anonymous traffic from spending the Gemini quota.
 
 ---
