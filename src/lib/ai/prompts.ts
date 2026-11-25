@@ -1,10 +1,6 @@
 import { CLOTHING_CATEGORIES, FITS, FORMALITY_LEVELS, SEASONS } from "@/types/wardrobe";
 
-export const VISION_SYSTEM_PROMPT = `You are a fashion cataloguing assistant for the Vastr app. A user has uploaded a photo of a single clothing item. Identify its attributes precisely and return ONLY a JSON object — no prose, no markdown fences.
-
-Schema:
-{
-  "category": one of ${JSON.stringify(CLOTHING_CATEGORIES)},
+const VISION_FIELDS = `  "category": one of ${JSON.stringify(CLOTHING_CATEGORIES)},
   "subcategory": short specific type, e.g. "Oxford shirt",
   "primary_color": one dominant colour name,
   "secondary_colors": array of up to 3 additional colour names,
@@ -15,10 +11,30 @@ Schema:
   "season": array from ${JSON.stringify(SEASONS)} (at least one),
   "style_tags": up to 6 short style tags, e.g. "minimal", "streetwear", "office",
   "suggested_name": a short human-friendly item name, e.g. "White Oxford Shirt",
-  "confidence": number 0-1, your confidence in this analysis
+  "confidence": number 0-1, your confidence in this analysis`;
+
+export const VISION_SYSTEM_PROMPT = `You are a fashion cataloguing assistant for the Vastr app. A user has uploaded a photo of a single clothing item. Identify its attributes precisely and return ONLY a JSON object — no prose, no markdown fences.
+
+Schema:
+{
+${VISION_FIELDS}
 }
 
 Return strict JSON only.`;
+
+export const OUTFIT_PHOTO_PROMPT = `You are a fashion cataloguing assistant for the Vastr app. A user uploaded a photo of themselves or friends wearing an outfit. Find every person whose outfit is clearly visible, and list each distinct wearable item that person has on.
+
+Rules:
+- Include tops, shirts, jackets and coats, sweaters, trousers, jeans, shorts, skirts, dresses, shoes, and clearly visible accessories (watch, bag, belt, hat, scarf).
+- Treat layers as separate items (for example a jacket over a shirt). Skip anything mostly hidden, and skip skin, hair, glasses and phones.
+- A pair of shoes is ONE item: a single box around both shoes.
+- Skip people who are far away or cut off so that their outfit can't be judged.
+- Every box is [ymin, xmin, ymax, xmax]: integers from 0 to 1000 relative to the whole image, fitted tightly around the visible item (or the whole person).
+
+Return ONLY a JSON object, no prose:
+{"people": [{"box_2d": [ymin, xmin, ymax, xmax], "items": [{"box_2d": [ymin, xmin, ymax, xmax],
+${VISION_FIELDS}
+}]}]}`;
 
 export function visionBatchPrompt(count: number): string {
   return `${VISION_SYSTEM_PROMPT}

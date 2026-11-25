@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { analyzeClothingBatch, type AnalyzeInput } from "@/lib/ai/vision";
-import { AIRateLimitError, AITransientError } from "@/lib/ai/errors";
+import { aiErrorResponse } from "@/lib/ai/error-response";
 
 // Vision calls with several photos can take a while; give the platform room.
 export const maxDuration = 60;
@@ -50,21 +50,8 @@ export async function POST(request: Request) {
     const { provider, items } = await analyzeClothingBatch(inputs);
     return NextResponse.json({ provider, results: items });
   } catch (err) {
-    if (err instanceof AIRateLimitError) {
-      console.warn(
-        `[api/analyze-image] rate limited: scope=${err.scope} retryAfter=${err.retryAfterSeconds}s`
-      );
-      return NextResponse.json(
-        { error: "rate_limited", scope: err.scope, retryAfterSeconds: err.retryAfterSeconds },
-        { status: 429, headers: { "Retry-After": String(err.retryAfterSeconds) } }
-      );
-    }
-    if (err instanceof AITransientError) {
-      return NextResponse.json(
-        { error: "busy", retryAfterSeconds: err.retryAfterSeconds },
-        { status: 503, headers: { "Retry-After": String(err.retryAfterSeconds) } }
-      );
-    }
+    const handled = aiErrorResponse(err);
+    if (handled) return handled;
     console.error("[api/analyze-image]", err);
     return NextResponse.json({ error: "Failed to analyze images" }, { status: 500 });
   }

@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { AddMenu } from "@/components/upload/add-menu";
+import { OutfitPhotoDialog } from "@/components/upload/outfit-photo-dialog";
 import { PhotoDropOverlay } from "@/components/upload/photo-drop-overlay";
 import { WardrobeFiltersBar } from "@/components/wardrobe/wardrobe-filters";
 import { ClothingCard } from "@/components/wardrobe/clothing-card";
@@ -31,6 +32,8 @@ function WardrobePageInner() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [dialogOpen, setDialogOpen] = useState(searchParams.get("add") !== null);
   const [editingItem, setEditingItem] = useState<WardrobeItem | null>(null);
+  // A new `key` per photo (or retry) gives the dialog a fresh state each time.
+  const [outfitPhoto, setOutfitPhoto] = useState<{ file: File; key: number } | null>(null);
 
   const filtered = useMemo(() => filterWardrobeItems(items, filters), [items, filters]);
 
@@ -61,7 +64,10 @@ function WardrobePageInner() {
                 <Sparkles className="h-4 w-4" /> Insights
               </Link>
             </Button>
-            <AddMenu onManual={openAdd} />
+            <AddMenu
+              onManual={openAdd}
+              onOutfitPhoto={(file) => setOutfitPhoto({ file, key: Date.now() })}
+            />
           </div>
         }
       />
@@ -106,6 +112,14 @@ function WardrobePageInner() {
 
       <AddItemDialog open={dialogOpen} onOpenChange={setDialogOpen} editingItem={editingItem} />
       <PhotoDropOverlay />
+      {outfitPhoto && (
+        <OutfitPhotoDialog
+          key={outfitPhoto.key}
+          file={outfitPhoto.file}
+          onClose={() => setOutfitPhoto(null)}
+          onRetry={() => setOutfitPhoto({ file: outfitPhoto.file, key: Date.now() })}
+        />
+      )}
     </div>
   );
 }

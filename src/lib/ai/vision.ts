@@ -25,7 +25,7 @@ export interface BatchOutcome {
   items: BatchItemOutcome[];
 }
 
-function toAIVisionResult(payload: ReturnType<typeof visionResultSchema.parse>): AIVisionResult {
+export function toAIVisionResult(payload: ReturnType<typeof visionResultSchema.parse>): AIVisionResult {
   return {
     category: payload.category,
     subcategory: payload.subcategory,
