@@ -5,6 +5,10 @@ import type { Outfit } from "@/types/outfit";
 import type { TasteProfile } from "@/lib/taste/learn";
 
 export interface StylistContext {
+  /** Chat refinements: shift the target formality up (+) or down (-) for this request only. */
+  formalityNudge?: number;
+  /** Items to steer away from (for example the ones the user just asked to swap out). */
+  avoidItemIds?: string[];
   /** Skip the AI model and use the built-in rule-based stylist (guest demo, no quota spent). */
   rulesOnly?: boolean;
   /** Learned from past ratings and wears; computed server-side from recentOutfits. */

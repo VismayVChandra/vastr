@@ -39,8 +39,32 @@ export async function getOrCreateSession(userId: string): Promise<ChatSession> {
     };
   }
 
-  const existing = chatSessionCollection.list().find((s) => s.userId === userId);
+  const existing = chatSessionCollection
+    .list()
+    .filter((s) => s.userId === userId)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
   if (existing) return existing;
+  return startNewSession(userId);
+}
+
+/** Starts a fresh conversation. Older ones are kept; the newest is what the chat opens to. */
+export async function startNewSession(userId: string): Promise<ChatSession> {
+  if (usesSupabase()) {
+    const supabase = getSupabaseBrowserClient()!;
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .insert({ user_id: userId, title: "Your AI Stylist" })
+      .select("*")
+      .single();
+    if (error) throw error;
+    return {
+      id: data.id,
+      userId: data.user_id,
+      title: data.title,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
   const now = new Date().toISOString();
   return chatSessionCollection.insert({
     id: uid(),

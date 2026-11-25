@@ -43,6 +43,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
             <div key={outfit.id} className="w-full min-w-[280px]">
               <OutfitLookCard
                 name={outfit.name}
+                subtitle={outfit.occasion}
                 items={resolveItems(items, outfit.itemIds)}
                 reason={outfit.reason}
                 missingItems={outfit.missingItems}

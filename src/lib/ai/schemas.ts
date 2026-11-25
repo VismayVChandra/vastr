@@ -43,6 +43,18 @@ export const outfitGenerationSchema = z.object({
 
 export type OutfitGenerationPayload = z.infer<typeof outfitGenerationSchema>;
 
+const chatLookSchema = generatedOutfitSchema.extend({
+  label: z.string().max(60).nullish(),
+});
+
+export const chatReplySchema = z.object({
+  reply: z.string().min(1).max(1500),
+  outfits: z.array(chatLookSchema).max(4).default([]),
+  follow_ups: z.array(z.string().min(1).max(40)).max(4).default([]),
+});
+
+export type ChatReplyPayload = z.infer<typeof chatReplySchema>;
+
 export const tripPackingSchema = z.object({
   packing_list: z
     .array(

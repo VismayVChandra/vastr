@@ -10,6 +10,8 @@ import type { MissingPiece, Outfit } from "@/types/outfit";
 
 interface OutfitLookCardProps {
   name: string;
+  /** The moment this look is for, e.g. "Morning · Presentation". */
+  subtitle?: string | null;
   items: WardrobeItem[];
   reason: string;
   missingItems?: MissingPiece[];
@@ -28,6 +30,7 @@ interface OutfitLookCardProps {
 
 export function OutfitLookCard({
   name,
+  subtitle,
   items,
   reason,
   missingItems = [],
@@ -45,7 +48,12 @@ export function OutfitLookCard({
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5">
-        <h3 className="font-display text-lg">{name}</h3>
+        <div className="min-w-0">
+          {subtitle && (
+            <p className="text-[11px] font-medium uppercase tracking-wide text-accent">{subtitle}</p>
+          )}
+          <h3 className="font-display text-lg">{name}</h3>
+        </div>
         {saved && (
           <Badge variant="accent">
             <Sparkles className="h-3 w-3" /> Saved

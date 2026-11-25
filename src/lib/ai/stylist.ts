@@ -3,12 +3,15 @@ import { getAnthropicClient, getGeminiClient, extractJson } from "./client";
 import { stylistSystemPrompt } from "./prompts";
 import { outfitGenerationSchema } from "./schemas";
 import { activeAIProvider, hasAIProvider, TEXT_MODEL } from "./config";
-import { withGeminiFallback } from "./gemini-models";
+import { GEMINI_REQUEST_OPTIONS, fastJsonConfig, withDeadline, withGeminiFallback } from "./gemini-models";
+
+/** How long the AI gets before the rule-based stylist answers instead. */
+const OUTFIT_BUDGET_MS = 20_000;
 import { generateOutfitsMock } from "./mock-stylist";
 import type { StylistContext, StylistResult } from "./stylist-context";
 import { comboKey, tasteNotesForPrompt } from "@/lib/taste/learn";
 
-function buildWardrobeContext(ctx: StylistContext) {
+export function buildWardrobeContext(ctx: StylistContext) {
   const taste = ctx.taste && ctx.taste.signalCount > 0 ? ctx.taste : null;
   const tasteNotes = taste ? tasteNotesForPrompt(taste, ctx.wardrobe) : null;
   const loved = new Set(tasteNotes?.loved_item_ids);
@@ -57,11 +60,14 @@ async function callGemini(ctx: StylistContext): Promise<unknown> {
   const prompt = JSON.stringify(buildWardrobeContext(ctx), null, 2);
   const result = await withGeminiFallback((modelName) =>
     getGeminiClient()
-      .getGenerativeModel({
-        model: modelName,
-        systemInstruction: stylistSystemPrompt(),
-        generationConfig: { responseMimeType: "application/json" },
-      })
+      .getGenerativeModel(
+        {
+          model: modelName,
+          systemInstruction: stylistSystemPrompt(),
+          generationConfig: fastJsonConfig(modelName),
+        },
+        GEMINI_REQUEST_OPTIONS
+      )
       .generateContent(prompt)
   );
   return extractJson(result.response.text());
@@ -92,7 +98,11 @@ export async function generateOutfits(ctx: StylistContext): Promise<StylistResul
   try {
     const validIds = new Set(ctx.wardrobe.map((i) => i.id));
 
-    const json = activeAIProvider === "gemini" ? await callGemini(ctx) : await callAnthropic(ctx);
+    const json = await withDeadline(
+      activeAIProvider === "gemini" ? callGemini(ctx) : callAnthropic(ctx),
+      OUTFIT_BUDGET_MS,
+      "AI outfit generation"
+    );
     const parsed = outfitGenerationSchema.parse(json);
 
     const outfits = parsed.outfits

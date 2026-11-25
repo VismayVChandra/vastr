@@ -2,7 +2,7 @@ import type { WardrobeItem, Formality } from "@/types/wardrobe";
 import type { StylistContext, GeneratedOutfit, StylistResult } from "./stylist-context";
 import { FORMALITY_RANK, comboKey, pairKey } from "@/lib/taste/learn";
 
-const OCCASION_KEYWORDS: Array<{ keywords: string[]; formality: Formality }> = [
+export const OCCASION_KEYWORDS: Array<{ keywords: string[]; formality: Formality }> = [
   { keywords: ["interview", "formal event", "wedding", "gala"], formality: "formal" },
   { keywords: ["office", "work", "presentation", "meeting", "client"], formality: "semi-formal" },
   { keywords: ["dinner", "date", "party", "night out", "birthday", "college"], formality: "smart casual" },
@@ -15,7 +15,7 @@ const BOTTOM_CATEGORIES = ["Jeans", "Trousers", "Shorts", "Skirts"];
 const OUTER_CATEGORIES = ["Jackets"];
 const FULL_BODY_CATEGORIES = ["Dresses"];
 
-function inferFormality(query: string, explicitConstraints: string[]): Formality | null {
+export function inferFormality(query: string, explicitConstraints: string[]): Formality | null {
   const text = `${query} ${explicitConstraints.join(" ")}`.toLowerCase();
   if (text.includes("formal")) return "formal";
   if (text.includes("casual") && !text.includes("smart casual")) return "casual";
@@ -39,7 +39,7 @@ function weatherIsRainy(weather: StylistContext["weather"]): boolean {
 
 /** The formality to aim for: the stated occasion, nudged by what the user has said was too formal/casual. */
 function effectiveTargetRank(targetFormality: Formality | null, ctx: StylistContext): number | null {
-  const shift = ctx.taste?.formalityShift ?? 0;
+  const shift = (ctx.taste?.formalityShift ?? 0) + (ctx.formalityNudge ?? 0);
   if (!targetFormality && Math.abs(shift) < 0.3) return null;
   const base = targetFormality ? FORMALITY_RANK[targetFormality] : 2;
   return Math.max(0, Math.min(4, base + shift));
@@ -163,12 +163,13 @@ export function generateOutfitsMock(ctx: StylistContext): StylistResult {
   // Variety: don't serve the last couple of looks again. Rated looks are exempt
   // (the taste profile already handles them, and a look you loved shouldn't be
   // pushed away) unless they were actually worn.
-  const avoidIds = new Set(
-    ctx.recentOutfits
+  const avoidIds = new Set([
+    ...ctx.recentOutfits
       .slice(0, 2)
       .filter((o) => !o.rating || o.wornAt.length > 0)
-      .flatMap((o) => o.itemIds)
-  );
+      .flatMap((o) => o.itemIds),
+    ...(ctx.avoidItemIds ?? []),
+  ]);
 
   const active = ctx.wardrobe.filter((i) => !i.archived);
   const looks: { name: string; slot: number }[] = [

@@ -108,7 +108,16 @@ Pick an occasion, activity, style, and colours (or hit **Surprise me**) and get 
 
 ### AI Stylist chat
 
-Describe your day in plain language and get a conversational reply with outfit cards inline. Conversations are saved, so you can come back to them.
+Describe your day in plain language and get a conversational reply with outfit cards inline. Conversations are saved, and **New chat** starts a fresh one.
+
+- **It remembers the conversation.** Follow up with "more casual", "different shoes" or "something warmer" and only that changes. Tappable suggestions under each answer make it one tap.
+- **It understands a day with several parts.** "A presentation in the morning and a party at night" gets one look per moment (labelled, with no repeated pieces), not one blended outfit.
+- **It asks when it has to.** A request like "I have an event" gets one short question instead of a guess.
+- **It works without the AI too.** Guests and any moment Gemini is overloaded get a rule-based version of the same behaviour, after a short time limit rather than a long spinner.
+
+### Feedback that changes the recommendations
+
+Every outfit card has a one-tap 👍 / 👎 (a 👎 can say why: too formal, wrong colours, bad combination...). Vastr turns ratings and wears into a taste profile: favourite and unloved colours, pieces and pairings, and whether you want things dressier or more relaxed, with recent feedback counting more. The stylist uses it on the next request, and a look you rejected is never served again. The History page shows what it has learned, in plain language, with a button to clear it.
 
 <p align="center"><img src="public/screenshots/stylist-chat.png" alt="AI Stylist chat" width="860" /></p>
 
@@ -380,7 +389,7 @@ Photos are stored in a public `wardrobe` storage bucket, in a per-user folder th
 - The **shop catalogue is mock data** and the "Shop" buttons are placeholders. "Import a purchase" supports photo upload only; there is no live e-commerce scraping.
 - **Outfit-photo extraction** needs a Gemini key, can miss mostly-hidden layers (for example a shirt under a buttoned jacket), and its boxes are accurate to within a few percent, so crops are padded.
 - **Trip packing** uses the rule-based engine only (no LLM path yet).
-- Outfit **feedback is stored but not yet fed back** into generation scoring.
+- Gemini sometimes returns "high demand" errors. Chat and outfit generation then fall back to the rule-based stylist after about 12–20 seconds, so answers are still instant-feeling but less nuanced.
 - In demo mode, data lives in one browser and is lost if site data is cleared.
 - There is **no automated test suite** yet; verification has been manual and in-browser.
 
@@ -389,7 +398,7 @@ Photos are stored in a public `wardrobe` storage bucket, in a per-user folder th
 ## Roadmap
 
 - Real e-commerce / affiliate integration behind `services/shop-service.ts`.
-- Learn from repeated 👎 feedback so disliked combinations stop appearing.
+- Swap a single piece in a look (needs a small schema change to record the swap as feedback).
 - LLM-backed trip packing for nuanced itineraries.
 - Background removal for cleaner item cards. Licensing matters here: `@imgly/background-removal` is AGPL-3.0 and Bria RMBG is non-commercial, so the plan is U²-Net (Apache-2.0, ~5 MB `u2netp`) running in the browser via `onnxruntime-web` (MIT).
 - Multi-photo items (front, back, detail).
