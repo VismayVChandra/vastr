@@ -90,6 +90,16 @@ Free AI tiers are strict about request limits, so users should never see "rate l
 - falls back through a chain of models (limits are per model) and, as a last resort, fills in a rough estimate flagged "please check" rather than failing;
 - shows a time estimate based on the real pacing, not a guess.
 
+### Add from an outfit photo
+
+Already have a photo of yourself in a great outfit? Choose **Add → From an outfit photo** and Vastr pulls each garment out of it: jacket, trousers, shoes, watch, bag and so on.
+
+1. AI finds every person in the photo and each piece they're wearing.
+2. If there's more than one person, tap the one whose outfit you want (the biggest is numbered 1).
+3. Review the detected pieces (untick any, fix names, categories and colours) and add them in one go.
+
+Each piece is cropped from a high-resolution copy of your photo, and very small items such as a watch get a little surrounding context so they stay sharp. **Only the cropped clothes are saved. The original photo, and the people in it, never are.** This feature needs a Gemini key, because reliable garment boxes are a Gemini capability.
+
 ### Style Me
 
 Pick an occasion, activity, style, and colours (or hit **Surprise me**) and get three distinct looks, each with an explanation and **Wear this** / **Save outfit** actions.
@@ -286,7 +296,7 @@ vastr/
 │   ├── app/
 │   │   ├── (app)/              # Authenticated pages: home, wardrobe, style-me,
 │   │   │                       #   stylist, shop, trips, history, profile
-│   │   ├── api/                # analyze-image, outfits/generate, trips/pack, weather
+│   │   ├── api/                # analyze-image, detect-outfit, outfits/generate, trips/pack, weather
 │   │   ├── login/  signup/  onboarding/
 │   │   ├── manifest.ts         # PWA manifest
 │   │   └── page.tsx            # Landing page
@@ -360,6 +370,7 @@ Photos are stored in a public `wardrobe` storage bucket, in a per-user folder th
 - On a **free Gemini key**, heavy use runs into daily limits (see [Setting up AI](#setting-up-ai)). The app degrades gracefully to flagged estimates, but a paid key is recommended for launch.
 - Without an AI key, the offline photo estimator **cannot actually see images**. It guesses from the file name and falls back to defaults you are meant to correct. Add a Gemini or Claude key for real recognition.
 - The **shop catalogue is mock data** and the "Shop" buttons are placeholders. "Import a purchase" supports photo upload only; there is no live e-commerce scraping.
+- **Outfit-photo extraction** needs a Gemini key, can miss mostly-hidden layers (for example a shirt under a buttoned jacket), and its boxes are accurate to within a few percent, so crops are padded.
 - **Trip packing** uses the rule-based engine only (no LLM path yet).
 - Outfit **feedback is stored but not yet fed back** into generation scoring.
 - In demo mode, data lives in one browser and is lost if site data is cleared.
@@ -372,7 +383,6 @@ Photos are stored in a public `wardrobe` storage bucket, in a per-user folder th
 - Real e-commerce / affiliate integration behind `services/shop-service.ts`.
 - Learn from repeated 👎 feedback so disliked combinations stop appearing.
 - LLM-backed trip packing for nuanced itineraries.
-- Add several pieces from one outfit photo (detect each garment and crop it out).
 - Background removal for cleaner item cards. Licensing matters here: `@imgly/background-removal` is AGPL-3.0 and Bria RMBG is non-commercial, so the plan is U²-Net (Apache-2.0, ~5 MB `u2netp`) running in the browser via `onnxruntime-web` (MIT).
 - Multi-photo items (front, back, detail).
 - Calendar integration so the stylist knows your day without being told.
