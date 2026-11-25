@@ -48,7 +48,9 @@ export function stylistSystemPrompt(): string {
 
 Prioritize, in order: (1) existing wardrobe combinations, (2) explaining trade-offs clearly, (3) naming missing pieces only when truly needed.
 
-Consider the user's style preferences, the weather, the occasion/activity, any stated constraints, and their past outfit feedback (avoid patterns they've disliked).
+Consider the user's style preferences, the weather, the occasion/activity, any stated constraints, and their past outfit feedback.
+
+If "taste_profile" is present it was learned from how this user rated and wore previous outfits, so trust it over the stated preferences when they disagree. Follow its notes, lean on items marked user_affinity "loved", go easy on items marked "disliked", and never return an outfit whose item_ids exactly match one listed in avoid_exact_combinations_of_item_ids. When feedback clearly shaped a choice, say so briefly in the "reason" (for example "you've liked navy, so..."), without listing the profile back.
 
 Respond with ONLY a JSON object matching this schema, no prose outside it:
 {

@@ -6,10 +6,24 @@ import { activeAIProvider, hasAIProvider, TEXT_MODEL } from "./config";
 import { withGeminiFallback } from "./gemini-models";
 import { generateOutfitsMock } from "./mock-stylist";
 import type { StylistContext, StylistResult } from "./stylist-context";
+import { comboKey, tasteNotesForPrompt } from "@/lib/taste/learn";
 
 function buildWardrobeContext(ctx: StylistContext) {
+  const taste = ctx.taste && ctx.taste.signalCount > 0 ? ctx.taste : null;
+  const tasteNotes = taste ? tasteNotesForPrompt(taste, ctx.wardrobe) : null;
+  const loved = new Set(tasteNotes?.loved_item_ids);
+  const disliked = new Set(tasteNotes?.disliked_item_ids);
+
   return {
     user_preferences: ctx.preferences,
+    // What the user's own ratings and wears have taught us. Stronger evidence than the stated preferences above.
+    taste_profile: tasteNotes
+      ? {
+          based_on_outfits: taste!.signalCount,
+          notes: tasteNotes.notes,
+          avoid_exact_combinations_of_item_ids: tasteNotes.avoid_combinations,
+        }
+      : undefined,
     weather: ctx.weather,
     request: ctx.query,
     constraints: ctx.constraints,
@@ -28,6 +42,7 @@ function buildWardrobeContext(ctx: StylistContext) {
         times_worn: i.timesWorn,
         last_worn_at: i.lastWornAt,
         favorite: i.favorite,
+        user_affinity: loved.has(i.id) ? "loved" : disliked.has(i.id) ? "disliked" : undefined,
       })),
     recent_outfits: ctx.recentOutfits.slice(0, 5).map((o) => ({
       name: o.name,
@@ -95,8 +110,12 @@ export async function generateOutfits(ctx: StylistContext): Promise<StylistResul
 
     if (outfits.length === 0) throw new Error("Model returned no valid outfits");
 
+    // Never hand back an exact look the user already said "not for me" to (unless nothing else is left).
+    const rejected = new Set(ctx.taste?.avoidCombos ?? []);
+    const fresh = outfits.filter((o) => !rejected.has(comboKey(o.itemIds)));
+
     return {
-      outfits,
+      outfits: fresh.length > 0 ? fresh : outfits,
       message: parsed.message ?? "Here's what I'd put together from your wardrobe.",
       isMock: false,
     };

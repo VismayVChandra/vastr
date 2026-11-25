@@ -2,8 +2,11 @@ import type { WardrobeItem } from "@/types/wardrobe";
 import type { StylePreferences } from "@/types/user";
 import type { WeatherSnapshot } from "@/types/weather";
 import type { Outfit } from "@/types/outfit";
+import type { TasteProfile } from "@/lib/taste/learn";
 
 export interface StylistContext {
+  /** Learned from past ratings and wears; computed server-side from recentOutfits. */
+  taste?: TasteProfile;
   wardrobe: WardrobeItem[];
   preferences: StylePreferences;
   weather: WeatherSnapshot | null;

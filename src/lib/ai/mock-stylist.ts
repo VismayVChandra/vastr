@@ -1,13 +1,6 @@
 import type { WardrobeItem, Formality } from "@/types/wardrobe";
 import type { StylistContext, GeneratedOutfit, StylistResult } from "./stylist-context";
-
-const FORMALITY_RANK: Record<Formality, number> = {
-  "very casual": 0,
-  casual: 1,
-  "smart casual": 2,
-  "semi-formal": 3,
-  formal: 4,
-};
+import { FORMALITY_RANK, comboKey, pairKey } from "@/lib/taste/learn";
 
 const OCCASION_KEYWORDS: Array<{ keywords: string[]; formality: Formality }> = [
   { keywords: ["interview", "formal event", "wedding", "gala"], formality: "formal" },
@@ -44,17 +37,34 @@ function weatherIsRainy(weather: StylistContext["weather"]): boolean {
   return !!weather && weather.isRain;
 }
 
+/** The formality to aim for: the stated occasion, nudged by what the user has said was too formal/casual. */
+function effectiveTargetRank(targetFormality: Formality | null, ctx: StylistContext): number | null {
+  const shift = ctx.taste?.formalityShift ?? 0;
+  if (!targetFormality && Math.abs(shift) < 0.3) return null;
+  const base = targetFormality ? FORMALITY_RANK[targetFormality] : 2;
+  return Math.max(0, Math.min(4, base + shift));
+}
+
 function scoreItem(
   item: WardrobeItem,
   ctx: StylistContext,
-  targetFormality: Formality | null,
+  targetRank: number | null,
   avoidIds: Set<string>
 ): number {
   let score = 0;
 
-  if (targetFormality) {
-    const diff = Math.abs(FORMALITY_RANK[item.formality] - FORMALITY_RANK[targetFormality]);
+  if (targetRank !== null) {
+    const diff = Math.abs(FORMALITY_RANK[item.formality] - targetRank);
     score += (2 - Math.min(diff, 2)) * 3;
+  }
+
+  const taste = ctx.taste;
+  if (taste) {
+    score += (taste.itemAffinity[item.id] ?? 0) * 2;
+    score += (taste.colorAffinity[item.primaryColor.toLowerCase()] ?? 0) * 1.5;
+    for (const tag of item.styleTags as string[]) {
+      score += (taste.styleAffinity[tag.toLowerCase()] ?? 0) * 0.8;
+    }
   }
 
   const favColors = ctx.preferences.favoriteColors.map((c) => c.toLowerCase());
@@ -104,16 +114,27 @@ function topPicksForCategory(
   items: WardrobeItem[],
   categories: string[],
   ctx: StylistContext,
-  targetFormality: Formality | null,
+  targetRank: number | null,
   avoidIds: Set<string>,
-  n: number
+  n: number,
+  /** Extra score for an item given what's already in the look (e.g. pairings the user disliked). */
+  bonus?: (item: WardrobeItem) => number
 ): WardrobeItem[] {
   return items
     .filter((i) => categories.includes(i.category))
-    .map((i) => ({ item: i, score: scoreItem(i, ctx, targetFormality, avoidIds) }))
+    .map((i) => ({ item: i, score: scoreItem(i, ctx, targetRank, avoidIds) + (bonus?.(i) ?? 0) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, n)
     .map((x) => x.item);
+}
+
+/** How well a candidate goes with the pieces already chosen, from past ratings. */
+function pairBonus(ctx: StylistContext, chosenIds: string[]) {
+  return (item: WardrobeItem) => {
+    const pairs = ctx.taste?.pairAffinity;
+    if (!pairs || chosenIds.length === 0) return 0;
+    return chosenIds.reduce((sum, id) => sum + (pairs[pairKey(id, item.id)] ?? 0), 0) * 2.5;
+  };
 }
 
 function describeReason(
@@ -123,6 +144,7 @@ function describeReason(
 ): string {
   const bits: string[] = [];
   if (targetFormality) bits.push(`matches a ${targetFormality} dress code`);
+  if ((ctx.taste?.signalCount ?? 0) > 0) bits.push("is tuned to the looks you've rated");
   if (ctx.weather) {
     if (weatherIsHot(ctx.weather)) bits.push("stays breathable in the heat");
     else if (weatherWantsLayer(ctx.weather)) bits.push("keeps you warm at the current temperature");
@@ -137,9 +159,14 @@ function describeReason(
 
 export function generateOutfitsMock(ctx: StylistContext): StylistResult {
   const targetFormality = inferFormality(ctx.query, ctx.constraints);
+  const targetRank = effectiveTargetRank(targetFormality, ctx);
+  // Variety: don't serve the last couple of looks again. Rated looks are exempt
+  // (the taste profile already handles them, and a look you loved shouldn't be
+  // pushed away) unless they were actually worn.
   const avoidIds = new Set(
     ctx.recentOutfits
       .slice(0, 2)
+      .filter((o) => !o.rating || o.wornAt.length > 0)
       .flatMap((o) => o.itemIds)
   );
 
@@ -151,20 +178,20 @@ export function generateOutfitsMock(ctx: StylistContext): StylistResult {
   ].slice(0, Math.max(1, ctx.count));
 
   const outfits: GeneratedOutfit[] = [];
-  const usedCombos = new Set<string>();
+  // Looks the user already said "not for me" to are never served again.
+  const usedCombos = new Set<string>(ctx.taste?.avoidCombos ?? []);
 
   for (const look of looks) {
     const missing: GeneratedOutfit["missingItems"] = [];
     const itemIds: string[] = [];
 
-    const dresses = topPicksForCategory(active, FULL_BODY_CATEGORIES, ctx, targetFormality, avoidIds, 3);
+    const dresses = topPicksForCategory(active, FULL_BODY_CATEGORIES, ctx, targetRank, avoidIds, 3);
     const useDress = dresses.length > 0 && look.slot % 2 === 1;
 
     if (useDress) {
       itemIds.push(dresses[Math.min(look.slot, dresses.length - 1)].id);
     } else {
-      const tops = topPicksForCategory(active, TOP_CATEGORIES, ctx, targetFormality, avoidIds, 3);
-      const bottoms = topPicksForCategory(active, BOTTOM_CATEGORIES, ctx, targetFormality, avoidIds, 3);
+      const tops = topPicksForCategory(active, TOP_CATEGORIES, ctx, targetRank, avoidIds, 3);
 
       if (tops.length === 0) {
         missing.push({
@@ -175,6 +202,17 @@ export function generateOutfitsMock(ctx: StylistContext): StylistResult {
       } else {
         itemIds.push(tops[Math.min(look.slot, tops.length - 1)].id);
       }
+
+      // Bottoms are scored against the chosen top so disliked pairings drop out.
+      const bottoms = topPicksForCategory(
+        active,
+        BOTTOM_CATEGORIES,
+        ctx,
+        targetRank,
+        avoidIds,
+        3,
+        pairBonus(ctx, itemIds)
+      );
 
       if (bottoms.length === 0) {
         missing.push({
@@ -187,7 +225,7 @@ export function generateOutfitsMock(ctx: StylistContext): StylistResult {
       }
     }
 
-    const shoes = topPicksForCategory(active, ["Shoes"], ctx, targetFormality, avoidIds, 3);
+    const shoes = topPicksForCategory(active, ["Shoes"], ctx, targetRank, avoidIds, 3, pairBonus(ctx, itemIds));
     if (shoes.length === 0) {
       missing.push({
         category: "Shoes",
@@ -199,18 +237,18 @@ export function generateOutfitsMock(ctx: StylistContext): StylistResult {
     }
 
     if (weatherWantsLayer(ctx.weather)) {
-      const outer = topPicksForCategory(active, OUTER_CATEGORIES, ctx, targetFormality, avoidIds, 2);
+      const outer = topPicksForCategory(active, OUTER_CATEGORIES, ctx, targetRank, avoidIds, 2, pairBonus(ctx, itemIds));
       if (outer.length > 0) itemIds.push(outer[Math.min(look.slot, outer.length - 1)].id);
     }
 
     if (look.slot === 0) {
-      const accessories = topPicksForCategory(active, ["Accessories"], ctx, targetFormality, avoidIds, 1);
+      const accessories = topPicksForCategory(active, ["Accessories"], ctx, targetRank, avoidIds, 1, pairBonus(ctx, itemIds));
       if (accessories.length > 0) itemIds.push(accessories[0].id);
     }
 
-    const comboKey = [...itemIds].sort().join(",");
-    if (itemIds.length === 0 || usedCombos.has(comboKey)) continue;
-    usedCombos.add(comboKey);
+    const key = comboKey(itemIds);
+    if (itemIds.length === 0 || usedCombos.has(key)) continue;
+    usedCombos.add(key);
 
     outfits.push({
       name: `${look.name}${targetFormality ? ` — ${targetFormality}` : ""}`,
@@ -218,6 +256,11 @@ export function generateOutfitsMock(ctx: StylistContext): StylistResult {
       reason: describeReason(look.name, targetFormality, ctx),
       missingItems: missing,
     });
+  }
+
+  // Every candidate was a look they'd rejected: better to repeat one than say the wardrobe is empty.
+  if (outfits.length === 0 && active.length > 0 && ctx.taste?.avoidCombos.length) {
+    return generateOutfitsMock({ ...ctx, taste: { ...ctx.taste, avoidCombos: [] } });
   }
 
   if (outfits.length === 0) {

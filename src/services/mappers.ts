@@ -89,7 +89,8 @@ export function outfitToOutfitRow(
     missing_items: outfit.missingItems as unknown as never,
     saved: outfit.saved,
     worn_at: outfit.wornAt,
-    rating: outfit.rating ?? undefined,
+    // null must pass through so a cleared rating is actually cleared; undefined leaves the column alone.
+    rating: outfit.rating,
     feedback_reasons: outfit.feedbackReasons,
     feedback_note: outfit.feedbackNote,
     source: outfit.source,

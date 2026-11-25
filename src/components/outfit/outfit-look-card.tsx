@@ -4,8 +4,9 @@ import { AlertCircle, RefreshCcw, Sparkles } from "lucide-react";
 import { ClothingSwatch } from "@/components/shared/clothing-swatch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { QuickFeedback } from "@/components/outfit/quick-feedback";
 import type { WardrobeItem } from "@/types/wardrobe";
-import type { MissingPiece } from "@/types/outfit";
+import type { MissingPiece, Outfit } from "@/types/outfit";
 
 interface OutfitLookCardProps {
   name: string;
@@ -19,6 +20,10 @@ interface OutfitLookCardProps {
   onWhy?: () => void;
   saved?: boolean;
   wearing?: boolean;
+  /** When provided, the card shows one-tap thumbs up/down so the stylist can learn. */
+  onRate?: (rating: NonNullable<Outfit["rating"]>, reasons: string[]) => void;
+  rating?: Outfit["rating"];
+  ratingReasons?: string[];
 }
 
 export function OutfitLookCard({
@@ -33,6 +38,9 @@ export function OutfitLookCard({
   onWhy,
   saved,
   wearing,
+  onRate,
+  rating = null,
+  ratingReasons,
 }: OutfitLookCardProps) {
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -70,6 +78,8 @@ export function OutfitLookCard({
       </div>
 
       <p className="px-5 text-sm text-muted-foreground leading-relaxed">{reason}</p>
+
+      {onRate && <QuickFeedback rating={rating} reasons={ratingReasons} onRate={onRate} />}
 
       <div className="flex flex-wrap items-center gap-2 px-5 py-5">
         {onWear && (

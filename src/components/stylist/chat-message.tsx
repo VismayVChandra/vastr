@@ -15,6 +15,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
   const { profile } = useAuth();
   const markSaved = useOutfitStore((s) => s.markSaved);
   const wearOutfit = useOutfitStore((s) => s.wearOutfit);
+  const giveFeedback = useOutfitStore((s) => s.giveFeedback);
   const outfitsById = useOutfitStore((s) => s.outfits);
 
   const isUser = message.role === "user";
@@ -46,6 +47,9 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
                 reason={outfit.reason}
                 missingItems={outfit.missingItems}
                 saved={outfit.saved}
+                rating={outfit.rating}
+                ratingReasons={outfit.feedbackReasons}
+                onRate={(rating, reasons) => giveFeedback(outfit.id, rating, reasons, null)}
                 onWear={async () => {
                   if (!profile) return;
                   await wearOutfit(outfit.id);

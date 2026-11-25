@@ -27,16 +27,28 @@ export function useOutfitGenerator() {
     async ({ query, constraints = [], count = 3 }: GenerateOptions): Promise<GeneratedOutfit[]> => {
       setGenerating(true);
       try {
+        // The server never looks at photos, and in demo mode they're inline data URLs
+        // that can blow past the request size limit, so leave them out.
+        const wardrobe = items.map((i) => ({ ...i, imageUrl: null }));
+        // Newest few for variety, plus everything the user rated or wore so the stylist can learn from it.
+        const withSignal = outfits.filter((o) => o.rating || o.wornAt.length > 0).slice(0, 80);
+        const seen = new Set<string>();
+        const recentOutfits = [...outfits.slice(0, 5), ...withSignal].filter((o) => {
+          if (seen.has(o.id)) return false;
+          seen.add(o.id);
+          return true;
+        });
+
         const res = await fetch("/api/outfits/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            wardrobe: items,
+            wardrobe,
             preferences: profile?.preferences,
             weather,
             query,
             constraints,
-            recentOutfits: outfits,
+            recentOutfits,
             count,
           }),
         });

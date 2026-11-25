@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { resolveItems } from "@/lib/resolve-items";
 import type { GeneratedOutfit } from "@/lib/ai/stylist-context";
+import type { Outfit } from "@/types/outfit";
 import { Shirt } from "lucide-react";
 
 function greeting() {
@@ -29,11 +30,18 @@ export default function HomePage() {
   const items = useWardrobeStore((s) => s.items);
   const wardrobeLoading = useWardrobeStore((s) => s.loading);
   const saveOutfit = useOutfitStore((s) => s.save);
+  const createDraft = useOutfitStore((s) => s.createDraft);
+  const markSaved = useOutfitStore((s) => s.markSaved);
+  const giveFeedback = useOutfitStore((s) => s.giveFeedback);
   const wearOutfit = useOutfitStore((s) => s.wearOutfit);
   const { generate, generating, weather } = useOutfitGenerator();
 
   const [look, setLook] = useState<GeneratedOutfit | null>(null);
-  const [savedOutfitId, setSavedOutfitId] = useState<string | null>(null);
+  // The stored record for the look on screen. Created the first time the user
+  // rates, saves or wears it, so unrated suggestions don't pile up in history.
+  const [recordId, setRecordId] = useState<string | null>(null);
+  const record = useOutfitStore((s) => s.outfits.find((o) => o.id === recordId) ?? null);
+  const ratedCount = useOutfitStore((s) => s.outfits.filter((o) => o.rating).length);
   const [wearingNow, setWearingNow] = useState(false);
   const [cursor, setCursor] = useState(0);
   const [pool, setPool] = useState<GeneratedOutfit[]>([]);
@@ -50,31 +58,47 @@ export default function HomePage() {
   }, [wardrobeLoading, items.length]);
 
   async function handleChange() {
-    if (pool.length > 1) {
+    // After a thumbs-down, ask for a fresh set so the new feedback shapes it; otherwise cycle the pool for free.
+    if (pool.length > 1 && record?.rating !== "not-for-me") {
       const next = (cursor + 1) % pool.length;
       setCursor(next);
       setLook(pool[next]);
-      setSavedOutfitId(null);
+      setRecordId(null);
       return;
     }
     const outfits = await generate({ query: "What should I wear today?", count: 3 });
     setPool(outfits);
     setCursor(0);
     setLook(outfits[0] ?? null);
-    setSavedOutfitId(null);
+    setRecordId(null);
+  }
+
+  const lookInput = look && {
+    name: look.name,
+    itemIds: look.itemIds,
+    reason: look.reason,
+    occasion: null,
+    missingItems: look.missingItems,
+    source: "home" as const,
+  };
+
+  /** Stores the look on screen (as a draft unless it's being saved) and returns its id. */
+  async function ensureRecord(): Promise<string | null> {
+    if (!profile || !lookInput) return null;
+    if (recordId) return recordId;
+    const outfit = await createDraft(profile.id, lookInput);
+    setRecordId(outfit.id);
+    return outfit.id;
   }
 
   async function handleSave() {
-    if (!profile || !look) return;
-    const outfit = await saveOutfit(profile.id, {
-      name: look.name,
-      itemIds: look.itemIds,
-      reason: look.reason,
-      occasion: null,
-      missingItems: look.missingItems,
-      source: "home",
-    });
-    setSavedOutfitId(outfit.id);
+    if (!profile || !lookInput) return;
+    if (recordId) {
+      await markSaved(recordId);
+    } else {
+      const outfit = await saveOutfit(profile.id, lookInput);
+      setRecordId(outfit.id);
+    }
     toast.success("Saved to your outfit history");
   }
 
@@ -82,24 +106,21 @@ export default function HomePage() {
     if (!profile || !look) return;
     setWearingNow(true);
     try {
-      let outfitId = savedOutfitId;
-      if (!outfitId) {
-        const outfit = await saveOutfit(profile.id, {
-          name: look.name,
-          itemIds: look.itemIds,
-          reason: look.reason,
-          occasion: null,
-          missingItems: look.missingItems,
-          source: "home",
-        });
-        outfitId = outfit.id;
-        setSavedOutfitId(outfitId);
-      }
+      const outfitId = await ensureRecord();
+      if (!outfitId) return;
+      if (!record?.saved) await markSaved(outfitId);
       await wearOutfit(outfitId);
       toast.success("Enjoy your outfit today!");
     } finally {
       setWearingNow(false);
     }
+  }
+
+  async function handleRate(rating: NonNullable<Outfit["rating"]>, reasons: string[]) {
+    const outfitId = await ensureRecord();
+    if (!outfitId) return;
+    await giveFeedback(outfitId, rating, reasons, null);
+    if (rating === "loved" && !record?.rating) toast.success("Got it, I'll build more like this");
   }
 
   const resolvedItems = look ? resolveItems(items, look.itemIds) : [];
@@ -120,7 +141,9 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display text-xl">Today&apos;s Outfit</h2>
           <Link href="/history" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            View history →
+            {ratedCount > 0
+              ? `Tuned from ${ratedCount} rating${ratedCount === 1 ? "" : "s"} · see what I've learned →`
+              : "View history →"}
           </Link>
         </div>
 
@@ -146,10 +169,13 @@ export default function HomePage() {
             items={resolvedItems}
             reason={look.reason}
             missingItems={look.missingItems}
-            saved={Boolean(savedOutfitId)}
+            saved={Boolean(record?.saved)}
             wearing={wearingNow}
+            rating={record?.rating ?? null}
+            ratingReasons={record?.feedbackReasons}
+            onRate={handleRate}
             onWear={handleWear}
-            onSave={savedOutfitId ? undefined : handleSave}
+            onSave={record?.saved ? undefined : handleSave}
             onRegenerate={handleChange}
             onWhy={() => toast.info(look.reason)}
             onCompleteLook={

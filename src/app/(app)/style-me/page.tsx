@@ -19,6 +19,7 @@ import { resolveItems } from "@/lib/resolve-items";
 import { STYLE_TAGS } from "@/types/wardrobe";
 import { COLOR_PALETTE } from "@/lib/colors";
 import type { GeneratedOutfit } from "@/lib/ai/stylist-context";
+import type { Outfit } from "@/types/outfit";
 import { toast } from "sonner";
 import { Shirt } from "lucide-react";
 
@@ -26,7 +27,11 @@ export default function StyleMePage() {
   const { profile } = useAuth();
   const items = useWardrobeStore((s) => s.items);
   const saveOutfit = useOutfitStore((s) => s.save);
+  const createDraft = useOutfitStore((s) => s.createDraft);
+  const markSaved = useOutfitStore((s) => s.markSaved);
+  const giveFeedback = useOutfitStore((s) => s.giveFeedback);
   const wearOutfit = useOutfitStore((s) => s.wearOutfit);
+  const outfits = useOutfitStore((s) => s.outfits);
   const { generate, generating } = useOutfitGenerator();
 
   const [occasion, setOccasion] = useState("");
@@ -34,7 +39,8 @@ export default function StyleMePage() {
   const [styles, setStyles] = useState<string[]>([]);
   const [colors, setColors] = useState<string[]>([]);
   const [results, setResults] = useState<GeneratedOutfit[] | null>(null);
-  const [savedIds, setSavedIds] = useState<Record<number, string>>({});
+  // Stored record per look, created the first time it's rated, saved or worn.
+  const [recordIds, setRecordIds] = useState<Record<number, string>>({});
   const [wearingIndex, setWearingIndex] = useState<number | null>(null);
   const [completeLookFor, setCompleteLookFor] = useState<GeneratedOutfit | null>(null);
 
@@ -50,22 +56,39 @@ export default function StyleMePage() {
 
   async function handleGenerate(surprise = false) {
     setResults(null);
-    setSavedIds({});
-    const outfits = await generate({ query: buildQuery(surprise), count: 3 });
-    setResults(outfits);
+    setRecordIds({});
+    const generated = await generate({ query: buildQuery(surprise), count: 3 });
+    setResults(generated);
   }
+
+  const toInput = (look: GeneratedOutfit) => ({
+    name: look.name,
+    itemIds: look.itemIds,
+    reason: look.reason,
+    occasion: occasion || null,
+    missingItems: look.missingItems,
+    source: "style-me" as const,
+  });
+
+  /** Stores a look (as a draft) the first time it needs a record, and returns its id. */
+  async function ensureRecord(index: number, look: GeneratedOutfit): Promise<string | null> {
+    if (!profile) return null;
+    if (recordIds[index]) return recordIds[index];
+    const outfit = await createDraft(profile.id, toInput(look));
+    setRecordIds((s) => ({ ...s, [index]: outfit.id }));
+    return outfit.id;
+  }
+
+  const recordFor = (index: number) => outfits.find((o) => o.id === recordIds[index]) ?? null;
 
   async function handleSave(index: number, look: GeneratedOutfit) {
     if (!profile) return;
-    const outfit = await saveOutfit(profile.id, {
-      name: look.name,
-      itemIds: look.itemIds,
-      reason: look.reason,
-      occasion: occasion || null,
-      missingItems: look.missingItems,
-      source: "style-me",
-    });
-    setSavedIds((s) => ({ ...s, [index]: outfit.id }));
+    if (recordIds[index]) {
+      await markSaved(recordIds[index]);
+    } else {
+      const outfit = await saveOutfit(profile.id, toInput(look));
+      setRecordIds((s) => ({ ...s, [index]: outfit.id }));
+    }
     toast.success("Outfit saved");
   }
 
@@ -73,24 +96,24 @@ export default function StyleMePage() {
     if (!profile) return;
     setWearingIndex(index);
     try {
-      let outfitId = savedIds[index];
-      if (!outfitId) {
-        const outfit = await saveOutfit(profile.id, {
-          name: look.name,
-          itemIds: look.itemIds,
-          reason: look.reason,
-          occasion: occasion || null,
-          missingItems: look.missingItems,
-          source: "style-me",
-        });
-        outfitId = outfit.id;
-        setSavedIds((s) => ({ ...s, [index]: outfitId! }));
-      }
+      const outfitId = await ensureRecord(index, look);
+      if (!outfitId) return;
+      if (!recordFor(index)?.saved) await markSaved(outfitId);
       await wearOutfit(outfitId);
       toast.success("Have a great day in it!");
     } finally {
       setWearingIndex(null);
     }
+  }
+
+  async function handleRate(
+    index: number,
+    look: GeneratedOutfit,
+    rating: NonNullable<Outfit["rating"]>,
+    reasons: string[]
+  ) {
+    const outfitId = await ensureRecord(index, look);
+    if (outfitId) await giveFeedback(outfitId, rating, reasons, null);
   }
 
   return (
@@ -162,10 +185,13 @@ export default function StyleMePage() {
                 items={resolveItems(items, look.itemIds)}
                 reason={look.reason}
                 missingItems={look.missingItems}
-                saved={Boolean(savedIds[i])}
+                saved={Boolean(recordFor(i)?.saved)}
                 wearing={wearingIndex === i}
+                rating={recordFor(i)?.rating ?? null}
+                ratingReasons={recordFor(i)?.feedbackReasons}
+                onRate={(rating, reasons) => handleRate(i, look, rating, reasons)}
                 onWear={() => handleWear(i, look)}
-                onSave={savedIds[i] ? undefined : () => handleSave(i, look)}
+                onSave={recordFor(i)?.saved ? undefined : () => handleSave(i, look)}
                 onCompleteLook={
                   look.missingItems.length > 0 ? () => setCompleteLookFor(look) : undefined
                 }

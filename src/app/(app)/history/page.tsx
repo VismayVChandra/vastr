@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ClothingSwatch } from "@/components/shared/clothing-swatch";
 import { FeedbackButtons } from "@/components/outfit/feedback-buttons";
+import { TasteCard } from "@/components/outfit/taste-card";
 import { useWardrobeStore } from "@/store/wardrobe-store";
 import { useOutfitStore } from "@/store/outfit-store";
 import { resolveItems } from "@/lib/resolve-items";
@@ -21,6 +22,8 @@ export default function HistoryPage() {
   return (
     <div>
       <PageHeader title="Outfit History" description="Every look you've saved or worn, in one place." />
+
+      <TasteCard />
 
       {worn.length === 0 ? (
         <EmptyState

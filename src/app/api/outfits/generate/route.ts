@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateOutfits } from "@/lib/ai/stylist";
 import type { StylistContext } from "@/lib/ai/stylist-context";
+import { learnTaste } from "@/lib/taste/learn";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as Partial<StylistContext> | null;
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
     recentOutfits: body.recentOutfits ?? [],
     count: body.count ?? 3,
   };
+  ctx.taste = learnTaste(ctx.recentOutfits, ctx.wardrobe);
 
   try {
     const result = await generateOutfits(ctx);
