@@ -1,4 +1,4 @@
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { usesSupabase } from "@/lib/demo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { outfitCollection } from "@/lib/store/local-db";
 import { uid } from "@/lib/utils";
@@ -6,7 +6,7 @@ import type { Outfit, OutfitInput } from "@/types/outfit";
 import { outfitRowToOutfit, outfitToOutfitRow } from "./mappers";
 
 export async function listOutfits(userId: string): Promise<Outfit[]> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("outfits")
@@ -27,7 +27,7 @@ export async function saveOutfit(
   input: OutfitInput,
   saved = true
 ): Promise<Outfit> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("outfits")
@@ -61,7 +61,7 @@ export async function recordOutfitWorn(id: string, outfit: Outfit): Promise<void
 }
 
 export async function updateOutfit(id: string, patch: Partial<Outfit>): Promise<Outfit | null> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("outfits")

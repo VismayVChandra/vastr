@@ -195,6 +195,14 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Demo mode is the fastest way to explore the whole product. Full mode is what the live site runs.
 
+### Try it without an account
+
+Even on a deployment with accounts, the landing page has a **Try the demo** button. It drops a visitor straight into the app with the 12-item starter wardrobe, no sign-up and no quiz. It reuses the local-storage backend above, switched on at runtime for that browser only:
+
+- Everything stays on the visitor's device. **Start over** wipes it, and signing up or in discards it before the real account loads.
+- A banner stays on screen so it's always clear it's a sandbox.
+- Guests use the rule-based stylist, and their 👍/👎 feedback still adapts it. Photo features (upload, camera, outfit photo) need AI, so they show a "create a free account" prompt. This keeps anonymous traffic from spending the Gemini quota.
+
 ---
 
 ## Configuration

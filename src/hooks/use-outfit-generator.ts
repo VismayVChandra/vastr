@@ -6,6 +6,7 @@ import { useWeather } from "./use-weather";
 import { useWardrobeStore } from "@/store/wardrobe-store";
 import { useOutfitStore } from "@/store/outfit-store";
 import type { GeneratedOutfit } from "@/lib/ai/stylist-context";
+import { isDemoSession } from "@/lib/demo";
 
 interface GenerateOptions {
   query: string;
@@ -50,6 +51,8 @@ export function useOutfitGenerator() {
             constraints,
             recentOutfits,
             count,
+            // Guests get the rule-based stylist so the demo never spends AI quota.
+            rulesOnly: isDemoSession(),
           }),
         });
         if (!res.ok) throw new Error("Failed to generate outfits");

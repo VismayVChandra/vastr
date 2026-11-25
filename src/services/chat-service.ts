@@ -1,4 +1,4 @@
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { usesSupabase } from "@/lib/demo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { chatMessageCollection, chatSessionCollection } from "@/lib/store/local-db";
 import { uid } from "@/lib/utils";
@@ -6,7 +6,7 @@ import type { ChatMessage, ChatSession } from "@/types/chat";
 import type { Outfit } from "@/types/outfit";
 
 export async function getOrCreateSession(userId: string): Promise<ChatSession> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data: existing } = await supabase
       .from("chat_sessions")
@@ -52,7 +52,7 @@ export async function getOrCreateSession(userId: string): Promise<ChatSession> {
 }
 
 export async function listMessages(sessionId: string): Promise<ChatMessage[]> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("chat_messages")
@@ -81,7 +81,7 @@ export async function addMessage(
   content: string,
   outfits: Outfit[] | null = null
 ): Promise<ChatMessage> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("chat_messages")

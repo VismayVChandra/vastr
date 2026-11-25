@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUploadStore } from "@/lib/upload/upload-store";
+import { isDemoSession } from "@/lib/demo";
+import { useDemoPrompt, type DemoLockReason } from "@/store/demo-prompt-store";
 
 export function AddMenu({
   onManual,
@@ -19,6 +21,7 @@ export function AddMenu({
   onOutfitPhoto: (file: File) => void;
 }) {
   const addFiles = useUploadStore((s) => s.addFiles);
+  const showDemoPrompt = useDemoPrompt((s) => s.show);
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const outfitRef = useRef<HTMLInputElement>(null);
@@ -27,6 +30,15 @@ export function AddMenu({
     const files = Array.from(e.target.files ?? []);
     if (files.length > 0) addFiles(files);
     e.target.value = "";
+  }
+
+  /** Photo features use AI, which guests don't get: show the sign-up prompt instead. */
+  function openPicker(ref: React.RefObject<HTMLInputElement | null>, reason: DemoLockReason) {
+    if (isDemoSession()) {
+      showDemoPrompt(reason);
+      return;
+    }
+    ref.current?.click();
   }
 
   function handleOutfitChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -70,7 +82,7 @@ export function AddMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          <DropdownMenuItem onSelect={() => outfitRef.current?.click()}>
+          <DropdownMenuItem onSelect={() => openPicker(outfitRef, "outfit-photo")}>
             <Shirt className="h-4 w-4" />
             <span>
               From an outfit photo
@@ -79,14 +91,14 @@ export function AddMenu({
               </span>
             </span>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => galleryRef.current?.click()}>
+          <DropdownMenuItem onSelect={() => openPicker(galleryRef, "photos")}>
             <ImagePlus className="h-4 w-4" />
             <span>
               Upload photos
               <span className="block text-xs text-muted-foreground">One piece per photo</span>
             </span>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => cameraRef.current?.click()}>
+          <DropdownMenuItem onSelect={() => openPicker(cameraRef, "photos")}>
             <Camera className="h-4 w-4" /> Take a photo
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onManual}>

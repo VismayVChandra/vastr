@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/nav/sidebar";
 import { BottomNav } from "@/components/nav/bottom-nav";
+import { DemoBanner } from "@/components/demo/demo-banner";
+import { DemoSignupDialog } from "@/components/demo/demo-signup-dialog";
 import { UploadTray } from "@/components/upload/upload-tray";
 import { BulkReviewDialog } from "@/components/upload/bulk-review-dialog";
 import { useAuth } from "@/hooks/use-auth";
@@ -45,6 +47,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
+      <DemoBanner />
       <main className="lg:pl-64 pb-20 lg:pb-0">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-10 py-6 lg:py-10">
           {children}
@@ -53,6 +56,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <BottomNav />
       <UploadTray />
       <BulkReviewDialog />
+      <DemoSignupDialog />
     </div>
   );
 }

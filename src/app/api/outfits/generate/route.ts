@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     constraints: body.constraints ?? [],
     recentOutfits: body.recentOutfits ?? [],
     count: body.count ?? 3,
+    rulesOnly: body.rulesOnly === true,
   };
   ctx.taste = learnTaste(ctx.recentOutfits, ctx.wardrobe);
 

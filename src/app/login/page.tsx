@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isDemoSession } from "@/lib/demo";
+import { leaveGuestDemo } from "@/hooks/use-auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,6 +31,11 @@ export default function LoginPage() {
     setLoading(false);
     if (error) {
       toast.error(error.message);
+      return;
+    }
+    // Leaving a guest demo: drop its sample data and reload so the app starts on the real account.
+    if (isDemoSession()) {
+      leaveGuestDemo("/home");
       return;
     }
     router.push("/home");

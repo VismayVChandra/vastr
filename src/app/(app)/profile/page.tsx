@@ -24,7 +24,7 @@ import { BUDGET_OPTIONS, OCCASION_OPTIONS, STYLE_OPTIONS } from "@/types/user";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { profile, updateProfile, signOut } = useAuth();
+  const { profile, updateProfile, signOut, isGuest } = useAuth();
 
   const [styles, setStyles] = useState<string[]>([]);
   const [favColors, setFavColors] = useState<string[]>([]);
@@ -78,7 +78,7 @@ export default function ProfilePage() {
         <div>
           <p className="font-display text-xl">{profile?.name || "Your name"}</p>
           <p className="text-sm text-muted-foreground">
-            {profile?.email ?? (isSupabaseConfigured ? "" : "Local demo mode")}
+            {profile?.email ?? (isGuest ? "Guest demo" : isSupabaseConfigured ? "" : "Local demo mode")}
           </p>
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function ProfilePage() {
 
       {isSupabaseConfigured && (
         <Button variant="outline" onClick={handleSignOut}>
-          <LogOut className="h-4 w-4" /> Sign out
+          <LogOut className="h-4 w-4" /> {isGuest ? "Exit demo" : "Sign out"}
         </Button>
       )}
     </div>

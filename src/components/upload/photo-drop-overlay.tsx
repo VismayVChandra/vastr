@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import { ImagePlus } from "lucide-react";
 import { useUploadStore } from "@/lib/upload/upload-store";
+import { isDemoSession } from "@/lib/demo";
+import { useDemoPrompt } from "@/store/demo-prompt-store";
 
 /** Lets people drag photos from their desktop anywhere onto the page. */
 export function PhotoDropOverlay() {
   const addFiles = useUploadStore((s) => s.addFiles);
+  const showDemoPrompt = useDemoPrompt((s) => s.show);
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
@@ -25,7 +28,12 @@ export function PhotoDropOverlay() {
       e.preventDefault();
       setDragging(false);
       const files = Array.from(e.dataTransfer?.files ?? []);
-      if (files.length > 0) addFiles(files);
+      if (files.length === 0) return;
+      if (isDemoSession()) {
+        showDemoPrompt("photos");
+        return;
+      }
+      addFiles(files);
     };
 
     window.addEventListener("dragover", onDragOver);
@@ -36,7 +44,7 @@ export function PhotoDropOverlay() {
       window.removeEventListener("dragleave", onDragLeave);
       window.removeEventListener("drop", onDrop);
     };
-  }, [addFiles]);
+  }, [addFiles, showDemoPrompt]);
 
   if (!dragging) return null;
 

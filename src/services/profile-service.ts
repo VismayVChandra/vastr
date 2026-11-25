@@ -1,11 +1,11 @@
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { usesSupabase } from "@/lib/demo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getLocalProfile, saveLocalProfile } from "@/lib/store/local-db";
 import type { UserProfile } from "@/types/user";
 import { profileRowToProfile } from "./mappers";
 
 export async function fetchProfile(userId: string): Promise<UserProfile | null> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const [{ data: userData }, { data, error }] = await Promise.all([
       supabase.auth.getUser(),
@@ -19,7 +19,7 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
 }
 
 export async function saveProfile(profile: UserProfile): Promise<UserProfile> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { error } = await supabase
       .from("profiles")

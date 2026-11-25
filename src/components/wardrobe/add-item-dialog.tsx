@@ -26,6 +26,7 @@ import { useWardrobeStore } from "@/store/wardrobe-store";
 import { persistWardrobeImage } from "@/services/storage-service";
 import { compressImage } from "@/lib/image/compress";
 import { analyzeSingle } from "@/lib/upload/upload-store";
+import { isDemoSession } from "@/lib/demo";
 import { visionToForm } from "@/lib/upload/vision-to-form";
 import { COLOR_PALETTE } from "@/lib/colors";
 import {
@@ -89,6 +90,12 @@ export function AddItemDialog({ open, onOpenChange, editingItem }: AddItemDialog
       // Shrink phone photos first: they'd otherwise exceed upload limits.
       const dataUrl = await compressImage(file);
       update("imageUrl", dataUrl);
+
+      // Guests keep their photo but don't spend AI quota on it.
+      if (isDemoSession()) {
+        setAiNote("AI auto-fill comes with a free account. In the demo, fill in the details yourself.");
+        return;
+      }
 
       // Shares the bulk queue, so it waits for AI capacity instead of failing.
       const outcome = await analyzeSingle(dataUrl, file.name);

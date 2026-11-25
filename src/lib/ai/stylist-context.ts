@@ -5,6 +5,8 @@ import type { Outfit } from "@/types/outfit";
 import type { TasteProfile } from "@/lib/taste/learn";
 
 export interface StylistContext {
+  /** Skip the AI model and use the built-in rule-based stylist (guest demo, no quota spent). */
+  rulesOnly?: boolean;
   /** Learned from past ratings and wears; computed server-side from recentOutfits. */
   taste?: TasteProfile;
   wardrobe: WardrobeItem[];

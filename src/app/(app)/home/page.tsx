@@ -141,9 +141,14 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display text-xl">Today&apos;s Outfit</h2>
           <Link href="/history" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            {ratedCount > 0
-              ? `Tuned from ${ratedCount} rating${ratedCount === 1 ? "" : "s"} · see what I've learned →`
-              : "View history →"}
+            {ratedCount > 0 ? (
+              <>
+                Tuned from {ratedCount} rating{ratedCount === 1 ? "" : "s"}
+                <span className="hidden sm:inline"> · see what I&apos;ve learned</span> →
+              </>
+            ) : (
+              "View history →"
+            )}
           </Link>
         </div>
 

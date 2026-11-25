@@ -3,31 +3,35 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/hooks/use-auth";
+import { Play } from "lucide-react";
+import { startGuestDemo, useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export default function LandingPage() {
   const router = useRouter();
-  const { userId, profile, loading, isDemoMode } = useAuth();
+  const { userId, profile, loading, isDemoMode, isGuest } = useAuth();
 
   useEffect(() => {
     if (loading) return;
-    if (isDemoMode) {
-      router.replace(profile?.onboardingComplete ? "/home" : "/onboarding");
-      return;
-    }
-    if (userId) {
+    // Local-only setups and signed-in members go straight in. A guest stays on
+    // this page so they can still reach sign-up, with a "continue" button.
+    if (isDemoMode || (userId && !isGuest)) {
       router.replace(profile?.onboardingComplete ? "/home" : "/onboarding");
     }
-  }, [loading, isDemoMode, userId, profile, router]);
+  }, [loading, isDemoMode, isGuest, userId, profile, router]);
 
-  if (loading || isDemoMode || userId) {
+  if (loading || isDemoMode || (userId && !isGuest)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="font-display text-2xl animate-pulse">Vastr</p>
       </div>
     );
+  }
+
+  function tryDemo() {
+    if (!isGuest) startGuestDemo();
+    router.push("/home");
   }
 
   return (
@@ -59,13 +63,20 @@ export default function LandingPage() {
             you actually own — matched to the weather, the occasion, and your style.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Button size="lg" className="w-full sm:w-auto" asChild>
-              <Link href="/signup">Create your wardrobe</Link>
+            <Button size="lg" className="w-full sm:w-auto" onClick={tryDemo}>
+              <Play className="h-4 w-4" />
+              {isGuest ? "Continue the demo" : "Try the demo"}
             </Button>
             <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
-              <Link href="/login">I have an account</Link>
+              <Link href="/signup">Create your wardrobe</Link>
             </Button>
           </div>
+          <p className="text-sm text-muted-foreground">
+            No sign-up needed to look around. Already a member?{" "}
+            <Link href="/login" className="text-foreground underline underline-offset-4">
+              Sign in
+            </Link>
+          </p>
         </div>
       </main>
 

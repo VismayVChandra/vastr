@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isDemoSession } from "@/lib/demo";
+import { leaveGuestDemo } from "@/hooks/use-auth";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -37,6 +39,11 @@ export default function SignupPage() {
       return;
     }
     toast.success("Account created! Check your email if confirmation is required.");
+    // Leaving a guest demo: drop its sample data and reload so the app starts on the real account.
+    if (isDemoSession()) {
+      leaveGuestDemo("/onboarding");
+      return;
+    }
     router.push("/onboarding");
   }
 

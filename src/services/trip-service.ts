@@ -1,11 +1,11 @@
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { usesSupabase } from "@/lib/demo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { tripCollection } from "@/lib/store/local-db";
 import { uid } from "@/lib/utils";
 import type { Trip } from "@/types/shop";
 
 export async function listTrips(userId: string): Promise<Trip[]> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("trips")
@@ -37,7 +37,7 @@ export async function saveTrip(
   userId: string,
   trip: Omit<Trip, "id" | "userId" | "createdAt">
 ): Promise<Trip> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("trips")

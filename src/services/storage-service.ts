@@ -1,11 +1,11 @@
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { usesSupabase } from "@/lib/demo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { uid } from "@/lib/utils";
 
 /** Uploads a wardrobe photo to Supabase Storage when configured; otherwise
  *  just returns the data URL as-is so it can be stored inline in local mode. */
 export async function persistWardrobeImage(userId: string, dataUrl: string): Promise<string> {
-  if (!isSupabaseConfigured) return dataUrl;
+  if (!usesSupabase()) return dataUrl;
 
   const supabase = getSupabaseBrowserClient()!;
   const match = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);

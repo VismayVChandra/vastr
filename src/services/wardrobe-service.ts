@@ -1,4 +1,4 @@
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { usesSupabase } from "@/lib/demo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { wardrobeCollection } from "@/lib/store/local-db";
 import { uid } from "@/lib/utils";
@@ -6,7 +6,7 @@ import type { WardrobeItem, WardrobeItemInput } from "@/types/wardrobe";
 import { itemToWardrobeRow, wardrobeRowToItem } from "./mappers";
 
 export async function listWardrobeItems(userId: string): Promise<WardrobeItem[]> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("wardrobe_items")
@@ -27,7 +27,7 @@ export async function addWardrobeItem(
   userId: string,
   input: WardrobeItemInput
 ): Promise<WardrobeItem> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("wardrobe_items")
@@ -56,7 +56,7 @@ export async function updateWardrobeItem(
   id: string,
   patch: Partial<WardrobeItem>
 ): Promise<WardrobeItem | null> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("wardrobe_items")
@@ -74,7 +74,7 @@ export async function updateWardrobeItem(
 }
 
 export async function deleteWardrobeItem(id: string): Promise<void> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { error } = await supabase.from("wardrobe_items").delete().eq("id", id);
     if (error) throw error;

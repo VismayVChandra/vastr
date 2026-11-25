@@ -1,4 +1,4 @@
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { usesSupabase } from "@/lib/demo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { wishlistCollection } from "@/lib/store/local-db";
 import { fetchMockProducts } from "@/lib/store/products";
@@ -28,7 +28,7 @@ export async function fetchRecommendedProducts(
 }
 
 export async function listWishlist(userId: string): Promise<WishlistEntry[]> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { data, error } = await supabase
       .from("wishlist")
@@ -47,7 +47,7 @@ export async function listWishlist(userId: string): Promise<WishlistEntry[]> {
 }
 
 export async function addToWishlist(userId: string, product: Product): Promise<void> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { error } = await supabase.from("wishlist").insert({ user_id: userId, product });
     if (error) throw error;
@@ -62,7 +62,7 @@ export async function addToWishlist(userId: string, product: Product): Promise<v
 }
 
 export async function removeFromWishlist(userId: string, productId: string): Promise<void> {
-  if (isSupabaseConfigured) {
+  if (usesSupabase()) {
     const supabase = getSupabaseBrowserClient()!;
     const { error } = await supabase
       .from("wishlist")

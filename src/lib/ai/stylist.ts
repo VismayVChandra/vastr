@@ -87,7 +87,7 @@ async function callAnthropic(ctx: StylistContext): Promise<unknown> {
 }
 
 export async function generateOutfits(ctx: StylistContext): Promise<StylistResult> {
-  if (!hasAIProvider) return generateOutfitsMock(ctx);
+  if (!hasAIProvider || ctx.rulesOnly) return generateOutfitsMock(ctx);
 
   try {
     const validIds = new Set(ctx.wardrobe.map((i) => i.id));
