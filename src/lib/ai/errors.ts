@@ -46,7 +46,15 @@ export function classifyAIError(err: unknown): AIRateLimitError | AITransientErr
   if (err instanceof AIRateLimitError || err instanceof AITransientError) return err;
 
   const status = (err as { status?: number })?.status;
-  if (typeof status !== "number") return null;
+  if (typeof status !== "number") {
+    // A timeout or dropped connection (no HTTP status) means the model was too slow or
+    // unreachable, which is the same "busy right now" as a 503.
+    const message = err instanceof Error ? err.message : "";
+    if (/aborted|timed? ?out|timeout|ECONNRESET|ETIMEDOUT|fetch failed/i.test(message)) {
+      return new AITransientError(3);
+    }
+    return null;
+  }
 
   const details = readDetails(err);
   const retryInfo = details.find((d) => d["@type"]?.endsWith("RetryInfo"));

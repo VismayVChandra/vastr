@@ -18,6 +18,8 @@ export interface Database {
           occasions: string[];
           budget: string;
           location: { lat: number; lon: number; label: string } | null;
+          /** Added later (see the migration at the end of supabase/schema.sql), so it may be absent. */
+          fit_profile?: unknown | null;
           created_at: string;
           updated_at: string;
         };

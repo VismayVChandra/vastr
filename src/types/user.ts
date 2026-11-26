@@ -1,4 +1,5 @@
 import type { StyleTag } from "./wardrobe";
+import type { FitProfile } from "./fit";
 
 export const STYLE_OPTIONS: StyleTag[] = [
   "casual",
@@ -32,6 +33,8 @@ export interface StylePreferences {
   dislikedColors: string[];
   occasions: string[];
   budget: string;
+  /** What suits this person (set up on the My Fit page). Optional: most people start without one. */
+  fitProfile?: FitProfile | null;
 }
 
 export interface UserProfile {

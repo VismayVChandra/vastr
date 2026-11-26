@@ -2,6 +2,7 @@ import { usesSupabase } from "@/lib/demo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getLocalProfile, saveLocalProfile } from "@/lib/store/local-db";
 import type { UserProfile } from "@/types/user";
+import type { FitProfile } from "@/types/fit";
 import { profileRowToProfile } from "./mappers";
 
 export async function fetchProfile(userId: string): Promise<UserProfile | null> {
@@ -42,4 +43,32 @@ export async function saveProfile(profile: UserProfile): Promise<UserProfile> {
   }
   saveLocalProfile(profile);
   return profile;
+}
+
+/** Thrown when the database doesn't have the fit_profile column yet. */
+export class FitProfileNotMigratedError extends Error {
+  constructor() {
+    super("The fit_profile column is missing. Run the latest migration in supabase/schema.sql.");
+  }
+}
+
+/**
+ * Saves the fit profile on its own, apart from saveProfile, so a database that hasn't had
+ * the fit_profile migration yet can never break saving ordinary preferences.
+ * In local and demo mode the profile is saved whole by saveProfile, so there's nothing to do here.
+ */
+export async function saveFitProfile(userId: string, fit: FitProfile | null): Promise<void> {
+  if (!usesSupabase()) return;
+  const supabase = getSupabaseBrowserClient()!;
+  const { error } = await supabase
+    .from("profiles")
+    .update({ fit_profile: fit as unknown as never, updated_at: new Date().toISOString() })
+    .eq("id", userId);
+  if (error) {
+    // Postgres "undefined column" (42703) or PostgREST's schema-cache miss (PGRST204).
+    if (error.code === "42703" || error.code === "PGRST204" || /fit_profile/i.test(error.message)) {
+      throw new FitProfileNotMigratedError();
+    }
+    throw error;
+  }
 }

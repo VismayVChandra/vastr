@@ -204,3 +204,10 @@ create policy "wardrobe images: owner write"
 create policy "wardrobe images: owner delete"
   on storage.objects for delete
   using (bucket_id = 'wardrobe' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- =========================================================
+-- Migration: fit profile (added after the first release)
+-- Run this once on an existing database. Safe to re-run.
+-- Holds what suits the person (build, colouring, flattering cuts), used by the stylist.
+-- =========================================================
+alter table public.profiles add column if not exists fit_profile jsonb;

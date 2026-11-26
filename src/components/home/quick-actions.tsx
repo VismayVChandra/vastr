@@ -1,18 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Camera, MessageCircle, Luggage } from "lucide-react";
+import { Sparkles, Camera, MessageCircle, Luggage, ScanSearch } from "lucide-react";
 
 const ACTIONS = [
   { href: "/style-me", label: "Style me", icon: Sparkles },
   { href: "/wardrobe?add=1", label: "Add clothes", icon: Camera },
   { href: "/stylist", label: "Ask stylist", icon: MessageCircle },
+  { href: "/inspiration", label: "Check an inspo", icon: ScanSearch },
   { href: "/trips", label: "Pack for a trip", icon: Luggage },
 ];
 
 export function QuickActions() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
       {ACTIONS.map((a) => (
         <Link
           key={a.href}

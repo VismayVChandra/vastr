@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { History, LogOut, Luggage, Sparkles } from "lucide-react";
+import { History, LogOut, Luggage, Sparkles, UserRound } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,8 @@ export default function ProfilePage() {
           dislikedColors,
           occasions,
           budget,
+          // Edited on the My Fit page; saving here must not wipe it.
+          fitProfile: profile?.preferences.fitProfile ?? null,
         },
       });
       toast.success("Preferences updated");
@@ -83,7 +85,14 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Link
+          href="/fit"
+          className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card px-4 py-5 text-center hover:border-accent/40 transition-colors"
+        >
+          <UserRound className="h-4.5 w-4.5 text-accent" />
+          <span className="text-xs font-medium">My fit</span>
+        </Link>
         <Link
           href="/history"
           className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card px-4 py-5 text-center hover:border-accent/40 transition-colors"

@@ -73,6 +73,16 @@ function scoreItem(
   if (favColors.includes(color)) score += 3;
   if (dislikedColors.includes(color)) score -= 6;
 
+  // What suits this person: flattering colours, and cuts they've been told to favour or avoid.
+  const fit = ctx.preferences.fitProfile;
+  if (fit) {
+    if (fit.bestColors.map((c) => c.toLowerCase()).includes(color)) score += 2;
+    if (fit.avoidColors.map((c) => c.toLowerCase()).includes(color)) score -= 3;
+    const mentions = (list: string[]) => list.some((s) => s.toLowerCase().includes(item.fit));
+    if (mentions(fit.suits)) score += 1.5;
+    if (mentions(fit.avoid)) score -= 2;
+  }
+
   const preferredStyles = ctx.preferences.preferredStyles.map((s) => s.toLowerCase());
   const overlap = item.styleTags.filter((t) => preferredStyles.includes(t.toLowerCase())).length;
   score += overlap * 2;

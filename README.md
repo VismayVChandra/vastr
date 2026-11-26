@@ -119,6 +119,15 @@ Describe your day in plain language and get a conversational reply with outfit c
 
 Every outfit card has a one-tap 👍 / 👎 (a 👎 can say why: too formal, wrong colours, bad combination...). Vastr turns ratings and wears into a taste profile: favourite and unloved colours, pieces and pairings, and whether you want things dressier or more relaxed, with recent feedback counting more. The stylist uses it on the next request, and a look you rejected is never served again. The History page shows what it has learned, in plain language, with a button to clear it.
 
+### Will it suit *me*? My fit and the inspiration check
+
+A look that works on a Pinterest model can fall flat on you, because bodies and colouring differ. Two features address that:
+
+- **My fit** builds a profile of what suits you: skin undertone and contrast, build and proportions, cuts that tend to flatter you or fight your frame, and your best and weakest colours. Fill it in by hand, or let Vastr read it from one or two photos. Either way you see every field and can correct it, since a photo can't capture everything and lighting skews colour. The stylist, the chat and the colour scoring all use it.
+- **Inspiration check** takes a screenshot of any outfit (paste it straight in from Pinterest or Instagram) and says how it would work on *you*, not the model: a verdict, the actual reason ("the cropped cut sits at your widest point"), concrete tweaks, and the closest version you can build from clothes you already own.
+
+**Privacy:** photos and screenshots are sent to Google's Gemini for analysis and are **not stored** by Vastr; only the written profile is kept, and you can edit or delete it any time. The analysis is limited to colouring and proportions. It never infers ethnicity, age, health or weight, and it talks about cuts and colours, not flaws. Both need a Gemini key and a signed-in account (guests can fill the profile in by hand).
+
 <p align="center"><img src="public/screenshots/stylist-chat.png" alt="AI Stylist chat" width="860" /></p>
 
 ### Wardrobe insights
@@ -247,6 +256,8 @@ cp .env.example .env.local
 3. Copy **Project URL** and **anon key** from *Project Settings → API* into `.env.local`.
 4. In *Authentication → URL Configuration*, add your site URL(s) (for example `http://localhost:3000` and your production URL) so sign-up and login redirects work.
 5. Restart the dev server. `/signup` and `/login` now create real accounts.
+
+> **Already set up an earlier version?** Re-run just the migration at the very end of [`supabase/schema.sql`](supabase/schema.sql) (`alter table public.profiles add column if not exists fit_profile jsonb;`). Without it everything still works, but a fit profile is kept only on the device it was made on.
 
 Row-level security is enabled on every table, so a user can only ever read or write their own data.
 
@@ -391,6 +402,7 @@ Photos are stored in a public `wardrobe` storage bucket, in a per-user folder th
 - **Outfit-photo extraction** needs a Gemini key, can miss mostly-hidden layers (for example a shirt under a buttoned jacket), and its boxes are accurate to within a few percent, so crops are padded.
 - **Trip packing** uses the rule-based engine only (no LLM path yet).
 - Gemini sometimes returns "high demand" errors. Chat and outfit generation then fall back to the rule-based stylist after about 12–20 seconds, so answers are still instant-feeling but less nuanced.
+- The **fit profile is an aid, not a measurement**. Photo analysis reads colouring and proportions roughly (and one selfie in odd light can misjudge undertone), so it is shown for you to correct. Gemini can also be slow or busy; requests wait and retry.
 - In demo mode, data lives in one browser and is lost if site data is cleared.
 - There is **no automated test suite** yet; verification has been manual and in-browser.
 
@@ -398,6 +410,8 @@ Photos are stored in a public `wardrobe` storage bucket, in a per-user folder th
 
 ## Roadmap
 
+- Add clothes with almost no effort: from a product link or a screenshot of an order, and later directly from shopping apps (Myntra, Amazon, Flipkart, AJIO). Direct integrations depend on each platform granting API access, so link and screenshot import comes first.
+- A virtual try-on preview on your own photo (needs a paid Gemini key for image generation).
 - Real e-commerce / affiliate integration behind `services/shop-service.ts`.
 - Swap a single piece in a look (needs a small schema change to record the swap as feedback).
 - LLM-backed trip packing for nuanced itineraries.

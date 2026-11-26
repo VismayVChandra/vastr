@@ -1,6 +1,7 @@
 import type { WardrobeItem } from "@/types/wardrobe";
 import type { Outfit, MissingPiece } from "@/types/outfit";
 import type { UserProfile } from "@/types/user";
+import type { FitProfile } from "@/types/fit";
 import type { Database } from "@/types/database";
 
 type WardrobeRow = Database["public"]["Tables"]["wardrobe_items"]["Row"];
@@ -111,6 +112,7 @@ export function profileRowToProfile(row: ProfileRow, email: string | null): User
       dislikedColors: row.disliked_colors ?? [],
       occasions: row.occasions ?? [],
       budget: row.budget,
+      fitProfile: (row.fit_profile as FitProfile | null | undefined) ?? null,
     },
     location: row.location,
     createdAt: row.created_at,

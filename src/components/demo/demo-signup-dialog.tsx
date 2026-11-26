@@ -18,6 +18,14 @@ const COPY: Record<DemoLockReason, { title: string; body: string }> = {
     title: "Add your own clothes with a free account",
     body: "Snap or upload photos and Vastr recognises every piece for you: category, colour, formality, all of it. That uses AI, so it's reserved for accounts. The demo wardrobe is yours to play with, and you can still add pieces by typing the details in.",
   },
+  "fit-photos": {
+    title: "Learn what suits you, from your photos",
+    body: "With an account, Vastr reads your colouring and proportions from a couple of photos, then picks cuts and colours that suit you. That uses AI, so it's reserved for accounts. In the demo you can still fill your fit profile in by hand.",
+  },
+  inspiration: {
+    title: "Will this Pinterest look suit you?",
+    body: "With an account, share a screenshot of any outfit and Vastr tells you how it would look on you, not the model, and rebuilds the closest version from your own wardrobe. That uses AI, so it's reserved for accounts.",
+  },
   "outfit-photo": {
     title: "Turn one outfit photo into wardrobe items",
     body: "With an account, drop in a single photo of an outfit and Vastr pulls out each garment as its own wardrobe item. That uses AI, so it's reserved for accounts.",

@@ -5,6 +5,7 @@ import {
   FORMALITY_LEVELS,
   SEASONS,
 } from "@/types/wardrobe";
+import { BUILDS, CONTRASTS, LEGS, SHOULDERS, TORSOS, UNDERTONES } from "@/types/fit";
 
 export const visionResultSchema = z.object({
   category: z.enum(CLOTHING_CATEGORIES),
@@ -54,6 +55,48 @@ export const chatReplySchema = z.object({
 });
 
 export type ChatReplyPayload = z.infer<typeof chatReplySchema>;
+
+/** A model that wanders off the allowed values shouldn't sink the whole answer: that field becomes null. */
+const lenientEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.enum(values).nullish().catch(null);
+
+export const fitAnalysisSchema = z.object({
+  usable: z.boolean(),
+  reason: z.string().max(300).nullish(),
+  undertone: lenientEnum(UNDERTONES),
+  contrast: lenientEnum(CONTRASTS),
+  build: lenientEnum(BUILDS),
+  shoulders: lenientEnum(SHOULDERS),
+  torso: lenientEnum(TORSOS),
+  legs: lenientEnum(LEGS),
+  suits: z.array(z.string().max(80)).max(10).default([]),
+  avoid: z.array(z.string().max(80)).max(10).default([]),
+  best_colors: z.array(z.string().max(30)).max(10).default([]),
+  avoid_colors: z.array(z.string().max(30)).max(8).default([]),
+  summary: z.string().max(500).default(""),
+});
+
+export type FitAnalysisPayload = z.infer<typeof fitAnalysisSchema>;
+
+export const inspirationSchema = z.object({
+  usable: z.boolean(),
+  reason: z.string().max(300).nullish(),
+  look_name: z.string().max(80).default("Inspiration look"),
+  pieces: z.array(z.string().max(120)).max(10).default([]),
+  verdict: z.enum(["great", "works_with_tweaks", "not_ideal"]).catch("works_with_tweaks"),
+  verdict_reason: z.string().max(900).default(""),
+  adjustments: z.array(z.string().max(240)).max(6).default([]),
+  from_wardrobe: z
+    .object({
+      name: z.string().max(80),
+      item_ids: z.array(z.string()),
+      reason: z.string().max(600),
+      missing_items: z.array(missingPieceSchema).default([]),
+    })
+    .nullish(),
+});
+
+export type InspirationPayload = z.infer<typeof inspirationSchema>;
 
 export const tripPackingSchema = z.object({
   packing_list: z
